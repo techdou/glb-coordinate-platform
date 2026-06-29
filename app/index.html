@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>通用 3D 坐标采集工具</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230c1014'/%3E%3Ccircle cx='16' cy='16' r='4' fill='none' stroke='%23e6b450' stroke-width='2'/%3E%3Cline x1='2' y1='16' x2='10' y2='16' stroke='%2341c58e' stroke-width='1.5'/%3E%3Cline x1='22' y1='16' x2='30' y2='16' stroke='%2341c58e' stroke-width='1.5'/%3E%3Cline x1='16' y1='2' x2='16' y2='10' stroke='%2341c58e' stroke-width='1.5'/%3E%3Cline x1='16' y1='22' x2='16' y2='30' stroke='%2341c58e' stroke-width='1.5'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="header">
+      <h1>通用 3D 坐标采集工具</h1>
+      <p class="sub">加载任意 GLB 模型和名称列表，选中名称后在模型上点一下，导出 <code>{名称: [x,y,z]}</code>。</p>
+    </div>
+
+    <div class="toolbar">
+      <button class="tool-btn primary" id="btnModel">选择 GLB 模型</button>
+      <button class="tool-btn" id="btnJson">导入 JSON 清单</button>
+      <button class="tool-btn" id="btnPaste">粘贴名称列表</button>
+      <button class="tool-btn good" id="btnExample">加载示例项目</button>
+      <button class="tool-btn good" id="btnExportMap">导出坐标 JSON</button>
+      <button class="tool-btn" id="btnExportFull">导出完整工程</button>
+      <button class="tool-btn" id="btnExportDraft">导出草稿</button>
+      <button class="tool-btn" id="btnImportDraft">导入草稿</button>
+      <button class="tool-btn" id="btnMigrateLegacy">迁移旧版坐标</button>
+      <button class="tool-btn" id="btnUndoMigrate">撤销迁移</button>
+      <button class="tool-btn danger" id="btnClear">清空坐标</button>
+    </div>
+
+    <div class="status-grid">
+      <div class="stat"><b id="statTotal">0</b><span>名称</span></div>
+      <div class="stat"><b id="statDone">0</b><span>已采集</span></div>
+      <div class="stat"><b id="statLeft">0</b><span>剩余</span></div>
+    </div>
+
+    <div class="list-head">
+      <div class="mode-tabs">
+        <button id="modeCollect" class="active">采集模式</button>
+        <button id="modeBrowse">浏览模式</button>
+      </div>
+      <input id="search" type="search" placeholder="搜索名称">
+    </div>
+
+    <div class="list-shell">
+      <div class="list-title">
+        <b>名称列表</b>
+        <span class="scroll-hint">滚轮滑动查看全部</span>
+      </div>
+      <ul id="list"></ul>
+      <div class="list-foot" id="listFoot">当前显示 0 项</div>
+    </div>
+  </aside>
+
+  <main id="viewer">
+    <div class="overlay">
+      <div id="hint"></div>
+      <div id="readout"></div>
+    </div>
+    <div class="view-controls">
+      <button id="viewFit" title="适配模型">Fit</button>
+      <button id="viewTop" title="俯视">Top</button>
+      <button id="viewIso" title="斜视">Iso</button>
+    </div>
+    <div id="toast"></div>
+  </main>
+</div>
+
+<dialog id="pasteDialog">
+  <div class="dialog-body">
+    <h2>粘贴名称列表</h2>
+    <p>支持一行一个名称，也支持粘贴 JSON：字符串数组、对象数组、<code>{structures:[...]}</code> 或 <code>{名称:[x,y,z]}</code>。</p>
+    <textarea id="pasteText" spellcheck="false" placeholder="点位 A&#10;点位 B&#10;点位 C"></textarea>
+    <div class="dialog-actions">
+      <button id="pasteCancel">取消</button>
+      <button id="pasteApply" class="primary">应用</button>
+    </div>
+  </div>
+</dialog>
+
+<input id="modelInput" type="file" accept=".glb,.gltf" hidden>
+<input id="jsonInput" type="file" accept=".json" hidden>
+<input id="draftInput" type="file" accept=".json" hidden>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

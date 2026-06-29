@@ -1,0 +1,175 @@
+{
+  "metadata": {
+    "schemaVersion": "1.0.0",
+    "projectName": "兰家湾白酒废水处理厂 3D 标注示例",
+    "purpose": "构筑物点位采集清单",
+    "coordinateSystem": "GLB 模型局部坐标系，X 为水平轴，Y 为竖直向上，Z 为深度轴",
+    "statusValues": ["待采集", "已采集", "已校准"],
+    "source": "由原始 structures_named.json.broken 清理重建；中心坐标需在网页中重新采集确认"
+  },
+  "structures": [
+    {
+      "id": 1,
+      "name": "预处理及进水在线监测用房",
+      "size_real": "45.0m x 48.0m x 5.5m",
+      "count": "1 座",
+      "note": "合建调节池、事故池、进水在线监测用房、格栅、微滤机、高效沉淀、气浮、除臭等功能",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 2,
+      "name": "水解酸化池",
+      "size_real": "24.0m x 19.5m x 13.3m",
+      "count": "1 座",
+      "note": "合建水解酸化池及脱硫塔系统",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 3,
+      "name": "高效厌氧反应器及泥水分离系统",
+      "size_real": "D=16m, H=24m",
+      "count": "4 座",
+      "note": "成套设备，4 个圆形罐",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 4,
+      "name": "生化池(MBR)",
+      "size_real": "89.9m x 34.4m x 9.0m",
+      "count": "1 座",
+      "note": "土建，分格，三级 AO",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 5,
+      "name": "反硝化滤池",
+      "size_real": "19.8m x 9.6m x 6.0m",
+      "count": "1 座",
+      "note": "配套反冲洗设备，分格",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 6,
+      "name": "芬顿反应器",
+      "size_real": "16.2m x 14.6m x 0.2m",
+      "count": "1 座",
+      "note": "芬顿池系统",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 7,
+      "name": "芬顿沉淀池",
+      "size_real": "18.35m x 13.35m x 5.5m",
+      "count": "1 座",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 8,
+      "name": "芬顿加药间",
+      "size_real": "19.05m x 11.55m x 12.0m",
+      "count": "1 座",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 9,
+      "name": "活性炭滤池",
+      "size_real": "17.0m x 12.4m x 0.2m",
+      "count": "1 座",
+      "note": "成套设备",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 10,
+      "name": "紫外消毒/计量槽/回用水池/泵房/出水监测",
+      "size_real": "19.2m x 18.0m x 9.8m",
+      "count": "1 座",
+      "note": "合建多项功能",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 11,
+      "name": "污泥调节池",
+      "size_real": "18.0m x 10.0m x 9.8m",
+      "count": "1 座",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 12,
+      "name": "污泥脱水机房",
+      "size_real": "52.4m x 18.0m x 19.8m",
+      "count": "1 座",
+      "note": "合建污泥脱水机房、配电间、高压配电间、发电机房等功能",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 13,
+      "name": "沼气预处理/脱硫塔",
+      "size_real": "11.0m x 7.5m x 9.2m",
+      "count": "1 座",
+      "note": "放水解酸化池池顶",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 14,
+      "name": "沼气预处理/沼气储罐",
+      "size_real": "D=10.83m",
+      "count": "2 座",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 15,
+      "name": "沼气预处理/沼气火炬",
+      "size_real": "4.2m x 2.4m x 9.2m",
+      "count": "1 座",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 16,
+      "name": "锅炉房",
+      "size_real": "18.0m x 6.3m x 5.4m",
+      "count": "1 座",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 17,
+      "name": "生产辅助用房及配电间",
+      "size_real": "36.0m x 20.2m x 9.2m",
+      "count": "1 座",
+      "note": "合建储药间、加药间、机修间、配电间",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 18,
+      "name": "综合楼",
+      "size_real": "44.4m x 14.1m",
+      "count": "1 座",
+      "center": null,
+      "status": "待采集"
+    },
+    {
+      "id": 19,
+      "name": "传达室",
+      "size_real": "6.6m x 5.7m",
+      "count": "1 座",
+      "center": null,
+      "status": "待采集"
+    }
+  ]
+}

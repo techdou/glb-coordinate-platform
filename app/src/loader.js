@@ -1,0 +1,237 @@
+// 模型加载、SHA-256 指纹、raycast 采点、marker 网格管理。
+import { THREE, scene, camera, controls, grid, renderer, loader, raycaster, pointer, hint } from './scene.js';
+import { state, round, firstUncollectedIndex, saveDraft } from './state.js';
+import { showToast, renderAll, setProgress, updateHint } from './ui.js';
+
+// ---------------------------------------------------------------------------
+// 模型加载
+// ---------------------------------------------------------------------------
+export async function loadModel(url, label, file = null) {
+  setProgress(`模型加载中：${label}`);
+  try {
+    const identity = await readModelIdentity(url, file);
+    const gltf = await new Promise((resolve, reject) => {
+      loader.load(url, resolve, onModelProgress, reject);
+    });
+
+    if (state.modelRoot) {
+      scene.remove(state.modelRoot);
+      clearMarkerMeshes();
+    }
+
+    state.modelRoot = gltf.scene;
+    state.modelLabel = label;
+    state.modelFileSize = identity.size;
+    state.modelSha256 = identity.sha256;
+
+    const originalBox = new THREE.Box3().setFromObject(state.modelRoot);
+    const center = originalBox.getCenter(new THREE.Vector3());
+    state.modelOriginalBox = originalBox.clone();
+    state.modelCenterOffset = center.clone();
+    state.modelRoot.position.sub(center);
+    scene.add(state.modelRoot);
+    state.modelBox = new THREE.Box3().setFromObject(state.modelRoot);
+
+    const size = state.modelBox.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    camera.near = maxDim / 10000;
+    camera.far = maxDim * 10000;
+    camera.updateProjectionMatrix();
+    grid.scale.setScalar(Math.max(maxDim / 4, 1));
+    grid.position.y = state.modelBox.min.y - maxDim * 0.01;
+
+    rebuildMarkers();
+    fitCamera();
+    renderAll();
+    showToast(`模型已加载：${label}`);
+  } catch (error) {
+    showToast(`模型加载失败：${error?.message || error}`, true);
+  } finally {
+    // setProgress 复用 hint 容器，加载结束后必须恢复正常提示文案。
+    updateHint();
+  }
+}
+
+function onModelProgress(event) {
+  if (!event.lengthComputable) return;
+  setProgress(`模型加载中：${Math.round(event.loaded / event.total * 100)}%`);
+}
+
+async function readModelIdentity(url, file) {
+  try {
+    const buffer = file
+      ? await file.arrayBuffer()
+      : await (await fetch(url)).arrayBuffer();
+    return {
+      size: buffer.byteLength,
+      sha256: await sha256Hex(buffer)
+    };
+  } catch {
+    return { size: file?.size ?? null, sha256: null };
+  }
+}
+
+async function sha256Hex(buffer) {
+  const hash = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hash))
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// ---------------------------------------------------------------------------
+// 采点（raycast）
+// ---------------------------------------------------------------------------
+export function collectAtPointer(event) {
+  if (!state.modelRoot) {
+    showToast('请先加载 GLB 模型', true);
+    return;
+  }
+  if (!state.structures.length) {
+    showToast('请先导入或粘贴名称列表', true);
+    return;
+  }
+  if (state.activeIndex < 0) state.activeIndex = firstUncollectedIndex();
+  if (state.activeIndex < 0) {
+    showToast('全部点位已经采集完成');
+    return;
+  }
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObject(state.modelRoot, true);
+  if (!hits.length) {
+    showToast('没有点到模型表面，请靠近目标位置后再点', true);
+    return;
+  }
+
+  const worldPoint = hits[0].point.clone();
+  const localPoint = state.modelRoot.worldToLocal(worldPoint.clone());
+  const coord = [round(localPoint.x), round(localPoint.y), round(localPoint.z)];
+  const item = state.structures[state.activeIndex];
+  item.center = coord;
+  item.status = '已采集';
+  placeMarker(state.activeIndex, coord);
+  state.dirty = true;
+  saveDraft();
+
+  const next = firstUncollectedIndex(state.activeIndex + 1);
+  state.activeIndex = next;
+  renderAll();
+  if (next >= 0) {
+    showToast(`已记录「${item.name}」，下一个：${state.structures[next].name}`);
+  } else {
+    showToast('全部点位采集完成，可以导出坐标 JSON');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// marker 网格管理
+// ---------------------------------------------------------------------------
+
+// 当前激活项用金色，其余用绿色。
+const COLOR_ACTIVE = 0xe6b450;
+const COLOR_DONE = 0x41c58e;
+
+export function placeMarker(index, localCoord) {
+  if (!state.modelRoot || !localCoord) return;
+  const old = state.markers.get(index);
+  if (old) disposeMarker(old);
+  const world = state.modelRoot.localToWorld(new THREE.Vector3(...localCoord));
+  const radius = markerRadius();
+  const geometry = new THREE.SphereGeometry(radius, 18, 18);
+  const material = new THREE.MeshBasicMaterial({
+    color: index === state.activeIndex ? COLOR_ACTIVE : COLOR_DONE
+  });
+  const marker = new THREE.Mesh(geometry, material);
+  marker.position.copy(world);
+  marker.userData.marker = true;
+  scene.add(marker);
+  state.markers.set(index, marker);
+}
+
+// 释放单个 marker 的 GPU 资源，避免重复采点导致内存累积。
+function disposeMarker(marker) {
+  scene.remove(marker);
+  marker.geometry?.dispose();
+  if (Array.isArray(marker.material)) marker.material.forEach(m => m.dispose());
+  else marker.material?.dispose();
+}
+
+// 选中项变化时只重设颜色，不重建网格（比 rebuildMarkers 轻量）。
+export function refreshMarkerColors() {
+  for (const [index, marker] of state.markers) {
+    marker.material.color.setHex(index === state.activeIndex ? COLOR_ACTIVE : COLOR_DONE);
+  }
+}
+
+export function markerRadius() {
+  if (!state.modelBox) return 0.015;
+  const size = state.modelBox.getSize(new THREE.Vector3());
+  return Math.max(Math.max(size.x, size.y, size.z) * 0.006, 0.004);
+}
+
+export function rebuildMarkers() {
+  clearMarkerMeshes();
+  state.structures.forEach((item, index) => {
+    if (item.center) placeMarker(index, item.center);
+  });
+}
+
+export function clearMarkerMeshes() {
+  for (const marker of state.markers.values()) disposeMarker(marker);
+  state.markers.clear();
+}
+
+// ---------------------------------------------------------------------------
+// 视角控制
+// ---------------------------------------------------------------------------
+export function fitCamera() {
+  if (!state.modelBox) return;
+  const sphere = state.modelBox.getBoundingSphere(new THREE.Sphere());
+  const distance = sphere.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.25;
+  const direction = new THREE.Vector3(1, 0.75, 1).normalize();
+  camera.position.copy(sphere.center).addScaledVector(direction, distance);
+  controls.target.copy(sphere.center);
+  controls.update();
+}
+
+export function setTopView() {
+  if (!state.modelBox) return;
+  const sphere = state.modelBox.getBoundingSphere(new THREE.Sphere());
+  // Z 轴加微小偏移，避免相机正对 -Y 时 OrbitControls 俯仰角为 0 触发 gimbal lock（视角卡住）。
+  camera.position.set(sphere.center.x, sphere.center.y + sphere.radius * 2.6, sphere.center.z + 0.0001);
+  controls.target.copy(sphere.center);
+  controls.update();
+}
+
+export function setIsoView() {
+  fitCamera();
+}
+
+export function flyToLocalCoord(localCoord, distanceScale = 0.75) {
+  if (!state.modelRoot || !localCoord) return;
+  const world = state.modelRoot.localToWorld(new THREE.Vector3(...localCoord));
+  const boxSize = state.modelBox?.getSize(new THREE.Vector3()) ?? new THREE.Vector3(1, 1, 1);
+  const distance = Math.max(boxSize.length() * 0.22 * distanceScale, markerRadius() * 16);
+  let direction = new THREE.Vector3().subVectors(camera.position, controls.target);
+  if (direction.lengthSq() < 0.0001) direction.set(1, 0.75, 1);
+  direction.normalize();
+  animateCamera(world.clone().addScaledVector(direction, distance), world, 700);
+}
+
+function animateCamera(toPosition, toTarget, duration) {
+  const fromPosition = camera.position.clone();
+  const fromTarget = controls.target.clone();
+  const started = performance.now();
+  function frame() {
+    const raw = Math.min((performance.now() - started) / duration, 1);
+    const t = raw < .5 ? 2 * raw * raw : 1 - Math.pow(-2 * raw + 2, 2) / 2;
+    camera.position.lerpVectors(fromPosition, toPosition, t);
+    controls.target.lerpVectors(fromTarget, toTarget, t);
+    controls.update();
+    if (raw < 1) requestAnimationFrame(frame);
+  }
+  frame();
+}

@@ -1,0 +1,35 @@
+# 导出的坐标、工程、草稿文件（运行时生成）
+coordinates_*.json
+coordinate_project_*.json
+draft_*.json
+structures_final.json
+
+# 模型压缩中间文件
+*.tmp1.glb
+
+# 示例项目的大体积 GLB 模型（103MB 原始 + 4.6MB 压缩版），用户自带或现场生成，不进库
+app/examples/ljw/model*.glb
+
+# 本地服务器与工具噪声
+.DS_Store
+Thumbs.db
+*.log
+__pycache__/
+*.pyc
+
+# 若后续扩展为 Node 项目时的依赖/构建目录
+node_modules/
+dist/
+# PyInstaller 构建中间产物
+build/
+
+# PyInstaller 打包产物（只提交 build.spec 源，不提交生成的 exe）
+*.spec.bak
+CoordinateCollector.exe
+
+# 临时验证脚本
+_verify*.mjs
+
+# 编辑器/IDE
+.idea/
+.vscode/
