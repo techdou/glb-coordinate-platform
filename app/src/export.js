@@ -137,6 +137,7 @@ export function undoLegacyMigration() {
 
   state.structures = normalizeStructures(state.migrationBackup.structures);
   state.activeIndex = firstUncollectedIndex();
+  state.selected.clear();
   state.migrationBackup = null;
   state.dirty = true;
   rebuildMarkers();
@@ -175,6 +176,7 @@ export async function importDraftFile(file) {
     // 在内存里恢复，避免整页 reload 丢失已加载的模型与视角。
     state.structures = normalizeStructures(draft.structures);
     state.activeIndex = firstUncollectedIndex();
+    state.selected.clear();
     state.modelLabel = draft.modelLabel || state.modelLabel || '';
     state.modelFileSize = draft.modelFileSize ?? state.modelFileSize ?? null;
     state.modelSha256 = draft.modelSha256 ?? state.modelSha256 ?? null;

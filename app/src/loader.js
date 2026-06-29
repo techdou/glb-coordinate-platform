@@ -159,6 +159,15 @@ function disposeMarker(marker) {
   else marker.material?.dispose();
 }
 
+// 按 index 移除单个 marker（选择性清空坐标用）。
+export function removeMarker(index) {
+  const marker = state.markers.get(index);
+  if (marker) {
+    disposeMarker(marker);
+    state.markers.delete(index);
+  }
+}
+
 // 选中项变化时只重设颜色，不重建网格（比 rebuildMarkers 轻量）。
 export function refreshMarkerColors() {
   for (const [index, marker] of state.markers) {

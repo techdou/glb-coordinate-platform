@@ -3,23 +3,11 @@
 
 export const STORAGE_KEY = 'generic_coordinate_collector_v1';
 
-// 示例项目位置：仅由「加载示例项目」按钮触发，不再自动加载。
-export const EXAMPLE_PROJECTS = [
-  {
-    id: 'ljw',
-    title: '兰家湾白酒废水处理厂',
-    modelCandidates: [
-      'examples/ljw/model_compressed.glb',
-      'examples/ljw/model.glb'
-    ],
-    structuresFile: 'examples/ljw/structures.json'
-  }
-];
-
 export const state = {
   mode: 'collect',
   structures: [],
   activeIndex: 0,
+  selected: new Set(),   // 列表勾选项的 index 集合，用于选择性清空
   modelRoot: null,
   modelOriginalBox: null,
   modelBox: null,
@@ -55,6 +43,7 @@ export function restoreDraft() {
     if (!draft?.structures?.length) return false;
     state.structures = draft.structures;
     state.activeIndex = Number.isInteger(draft.activeIndex) ? draft.activeIndex : firstUncollectedIndex();
+    state.selected.clear();
     state.modelLabel = draft.modelLabel || '';
     state.modelFileSize = draft.modelFileSize ?? null;
     state.modelSha256 = draft.modelSha256 ?? null;

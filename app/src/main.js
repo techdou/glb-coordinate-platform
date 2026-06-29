@@ -7,13 +7,14 @@ import {
   fitCamera, setTopView, setIsoView
 } from './loader.js';
 import {
-  setMode, renderAll, renderList, updateHint, showToast, clearCoordinates
+  setMode, renderAll, renderList, updateHint, showToast,
+  clearCoordinates, clearCoordsOnly, clearAll,
+  clearSelectedCoords, selectAll, clearSelection
 } from './ui.js';
 import {
   exportNameMap, exportFullProject, migrateLegacyCenteredCoordinates,
   undoLegacyMigration, exportDraftFile, importDraftFile
 } from './export.js';
-import { loadExample } from './examples.js';
 
 // ---------------------------------------------------------------------------
 // DOM 元素
@@ -23,13 +24,13 @@ const jsonInput = document.getElementById('jsonInput');
 const draftInput = document.getElementById('draftInput');
 const pasteDialog = document.getElementById('pasteDialog');
 const pasteText = document.getElementById('pasteText');
+const clearDialog = document.getElementById('clearDialog');
 
 // ---------------------------------------------------------------------------
 // 按钮事件
 // ---------------------------------------------------------------------------
 document.getElementById('btnModel').addEventListener('click', () => modelInput.click());
 document.getElementById('btnJson').addEventListener('click', () => jsonInput.click());
-document.getElementById('btnExample').addEventListener('click', () => loadExample());
 document.getElementById('btnPaste').addEventListener('click', openPasteDialog);
 document.getElementById('btnExportMap').addEventListener('click', exportNameMap);
 document.getElementById('btnExportFull').addEventListener('click', exportFullProject);
@@ -51,6 +52,22 @@ document.getElementById('viewIso').addEventListener('click', setIsoView);
 // 粘贴对话框
 document.getElementById('pasteCancel').addEventListener('click', () => pasteDialog.close());
 document.getElementById('pasteApply').addEventListener('click', applyPastedList);
+
+// 清空对话框：取消 / 仅清坐标 / 清空全部
+document.getElementById('clearCancel').addEventListener('click', () => clearDialog.close());
+document.getElementById('clearCoordsOnly').addEventListener('click', () => {
+  clearDialog.close();
+  clearCoordsOnly();
+});
+document.getElementById('clearAll').addEventListener('click', () => {
+  clearDialog.close();
+  clearAll();
+});
+
+// 列表底部：选择性清空操作条
+document.getElementById('btnClearSelected').addEventListener('click', clearSelectedCoords);
+document.getElementById('btnSelectAll').addEventListener('click', selectAll);
+document.getElementById('btnClearSelect').addEventListener('click', clearSelection);
 
 // 文件输入
 modelInput.addEventListener('change', async (event) => {
@@ -189,6 +206,7 @@ function applyPastedList() {
 function replaceStructures(structures, message) {
   state.structures = structures;
   state.activeIndex = firstUncollectedIndex();
+  state.selected.clear();
   state.dirty = true;
   rebuildMarkers();
   saveDraft();

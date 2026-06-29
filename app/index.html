@@ -19,7 +19,6 @@
       <button class="tool-btn primary" id="btnModel">选择 GLB 模型</button>
       <button class="tool-btn" id="btnJson">导入 JSON 清单</button>
       <button class="tool-btn" id="btnPaste">粘贴名称列表</button>
-      <button class="tool-btn good" id="btnExample">加载示例项目</button>
       <button class="tool-btn good" id="btnExportMap">导出坐标 JSON</button>
       <button class="tool-btn" id="btnExportFull">导出完整工程</button>
       <button class="tool-btn" id="btnExportDraft">导出草稿</button>
@@ -49,6 +48,12 @@
         <span class="scroll-hint">滚轮滑动查看全部</span>
       </div>
       <ul id="list"></ul>
+      <div class="list-action" id="listAction" hidden>
+        <span id="listActionCount">已选 0 项</span>
+        <button class="tool-btn danger small" id="btnClearSelected" title="清空所选名称的坐标（保留名称本身）">清空选中坐标</button>
+        <button class="tool-btn small" id="btnSelectAll">全选</button>
+        <button class="tool-btn small" id="btnClearSelect">取消选择</button>
+      </div>
       <div class="list-foot" id="listFoot">当前显示 0 项</div>
     </div>
   </aside>
@@ -76,6 +81,19 @@
       <button id="pasteCancel">取消</button>
       <button id="pasteApply" class="primary">应用</button>
     </div>
+  </div>
+</dialog>
+
+<dialog id="clearDialog">
+  <div class="dialog-body">
+    <h2>清空</h2>
+    <p>选择清理范围：</p>
+    <div class="dialog-actions clear-actions">
+      <button id="clearCancel">取消</button>
+      <button id="clearCoordsOnly">仅清空坐标</button>
+      <button id="clearAll" class="danger">清空全部</button>
+    </div>
+    <p class="dialog-hint">「仅清空坐标」保留名称列表，可重新采集；「清空全部」清掉名称与坐标，回到空白工作台（已加载的模型不受影响）。</p>
   </div>
 </dialog>
 
