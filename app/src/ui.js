@@ -115,11 +115,11 @@ function selectItem(index) {
 export function updateHint() {
   const active = state.structures[state.activeIndex];
   if (!state.modelRoot && !state.structures.length) {
-    hint.innerHTML = '欢迎使用。点击 <b>选择 GLB 模型</b> 或拖入模型文件，再导入名称清单即可开始。';
+    hint.innerHTML = '欢迎使用。点击 <b>选择 GLB / STL 模型</b> 或拖入模型文件，再导入名称清单即可开始。';
     return;
   }
   if (!state.modelRoot) {
-    hint.innerHTML = '请加载 GLB 模型：点击 <b>选择 GLB 模型</b>，或将 .glb 文件拖入窗口。';
+    hint.innerHTML = '请加载模型：点击 <b>选择 GLB / STL 模型</b>，或将 .glb / .stl 文件拖入窗口。';
     return;
   }
   if (!state.structures.length) {

@@ -1,7 +1,32 @@
 // 模型加载、SHA-256 指纹、raycast 采点、marker 网格管理。
-import { THREE, scene, camera, controls, grid, renderer, loader, raycaster, pointer, hint } from './scene.js';
+import { THREE, scene, camera, controls, grid, renderer, loader, stlLoader, raycaster, pointer, hint } from './scene.js';
 import { state, round, firstUncollectedIndex, saveDraft } from './state.js';
 import { showToast, renderAll, setProgress, updateHint } from './ui.js';
+
+// STL 统一渲染材质：标准 PBR，外观与 GLB 默认光照协调。
+const STL_MATERIAL = new THREE.MeshStandardMaterial({
+  color: 0xb8c4cc,
+  metalness: 0.1,
+  roughness: 0.75,
+  side: THREE.DoubleSide  // STL 多为开放壳体，双面避免"看穿"
+});
+
+// 根据扩展名解析模型，统一返回一个 Object3D 根节点。
+async function parseModel(url, label) {
+  const ext = label.toLowerCase().split('.').pop();
+  if (ext === 'stl') {
+    const geometry = await stlLoader.loadAsync(url, onModelProgress);
+    // STL 可能缺法线，统一重算，保证光照正确。
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, STL_MATERIAL);
+    const group = new THREE.Group();
+    group.add(mesh);
+    return group;
+  }
+  // glb / gltf
+  const gltf = await loader.loadAsync(url, onModelProgress);
+  return gltf.scene;
+}
 
 // ---------------------------------------------------------------------------
 // 模型加载
@@ -10,16 +35,14 @@ export async function loadModel(url, label, file = null) {
   setProgress(`模型加载中：${label}`);
   try {
     const identity = await readModelIdentity(url, file);
-    const gltf = await new Promise((resolve, reject) => {
-      loader.load(url, resolve, onModelProgress, reject);
-    });
+    const modelRoot = await parseModel(url, label);
 
     if (state.modelRoot) {
       scene.remove(state.modelRoot);
       clearMarkerMeshes();
     }
 
-    state.modelRoot = gltf.scene;
+    state.modelRoot = modelRoot;
     state.modelLabel = label;
     state.modelFileSize = identity.size;
     state.modelSha256 = identity.sha256;
@@ -47,7 +70,7 @@ export async function loadModel(url, label, file = null) {
   } catch (error) {
     showToast(`模型加载失败：${error?.message || error}`, true);
   } finally {
-    // setProgress 复用 hint 容器，加载结束后必须恢复正常提示文案。
+    // setProgress 复用 hint 宀器，加载结束后必须恢复正常提示文案。
     updateHint();
   }
 }
@@ -83,7 +106,7 @@ async function sha256Hex(buffer) {
 // ---------------------------------------------------------------------------
 export function collectAtPointer(event) {
   if (!state.modelRoot) {
-    showToast('请先加载 GLB 模型', true);
+    showToast('请先加载模型（GLB / STL）', true);
     return;
   }
   if (!state.structures.length) {

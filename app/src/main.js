@@ -118,7 +118,7 @@ viewer.addEventListener('drop', async (event) => {
   const file = event.dataTransfer?.files?.[0];
   if (!file) return;
   const name = file.name.toLowerCase();
-  if (name.endsWith('.glb') || name.endsWith('.gltf')) {
+  if (name.endsWith('.glb') || name.endsWith('.gltf') || name.endsWith('.stl')) {
     const objectUrl = URL.createObjectURL(file);
     try {
       await loadModel(objectUrl, file.name, file);
@@ -133,7 +133,7 @@ viewer.addEventListener('drop', async (event) => {
       showToast(`JSON 解析失败：${error.message}`, true);
     }
   } else {
-    showToast('只支持 .glb / .gltf / .json 文件', true);
+    showToast('只支持 .glb / .gltf / .stl / .json 文件', true);
   }
 });
 

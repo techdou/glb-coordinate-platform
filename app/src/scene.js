@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 
 // 离线 DRACO 解码器：本地 vendor 目录
 const DRACO_DECODER_PATH = 'vendor/three/examples/jsm/libs/draco/';
@@ -46,5 +47,8 @@ const draco = new DRACOLoader();
 draco.setDecoderPath(DRACO_DECODER_PATH);
 export const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
+
+// STL 加载器（无 Draco 依赖，独立实例）
+export const stlLoader = new STLLoader();
 
 export { THREE };
