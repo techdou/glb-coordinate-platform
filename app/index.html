@@ -25,6 +25,7 @@
       <button class="tool-btn" id="btnImportDraft">导入草稿</button>
       <button class="tool-btn" id="btnMigrateLegacy">迁移旧版坐标</button>
       <button class="tool-btn" id="btnUndoMigrate">撤销迁移</button>
+      <button class="tool-btn" id="btnCompress">压缩 GLB</button>
       <button class="tool-btn danger" id="btnClear">清空坐标</button>
     </div>
 
@@ -100,6 +101,32 @@
 <input id="modelInput" type="file" accept=".glb,.gltf,.stl" hidden>
 <input id="jsonInput" type="file" accept=".json" hidden>
 <input id="draftInput" type="file" accept=".json" hidden>
+<input id="compressInput" type="file" accept=".glb" hidden>
+
+<dialog id="compressDialog">
+  <div class="dialog-body">
+    <h2>压缩 GLB 模型</h2>
+    <p>选择一个 GLB 文件，服务器用 gltf-transform（DRACO + 纹理优化）压缩后下载。需要运行环境装有 Node.js（npx）。</p>
+    <div class="compress-row">
+      <label for="compressQuality">质量档位</label>
+      <select id="compressQuality">
+        <option value="high">高保真（体积缩减少）</option>
+        <option value="medium" selected>平衡（推荐，约减 70%）</option>
+        <option value="low">高压缩（约减 80%，细节有损）</option>
+      </select>
+    </div>
+    <div class="compress-row">
+      <label>GLB 文件</label>
+      <span id="compressFileName" class="compress-file">未选择</span>
+      <button class="tool-btn small" id="compressPick">选择文件</button>
+    </div>
+    <div id="compressStatus" class="compress-status" hidden></div>
+    <div class="dialog-actions">
+      <button id="compressCancel">取消</button>
+      <button id="compressRun" class="primary" disabled>开始压缩</button>
+    </div>
+  </div>
+</dialog>
 
 <script type="importmap">
 {

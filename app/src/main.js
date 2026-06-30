@@ -15,6 +15,7 @@ import {
   exportNameMap, exportFullProject, migrateLegacyCenteredCoordinates,
   undoLegacyMigration, exportDraftFile, importDraftFile
 } from './export.js';
+import { initCompress } from './compress.js';
 
 // ---------------------------------------------------------------------------
 // DOM 元素
@@ -169,6 +170,7 @@ window.addEventListener('beforeunload', (event) => {
 // 初始化（通用化：空白启动，不自动加载任何模型/清单）
 // ---------------------------------------------------------------------------
 async function init() {
+  initCompress();
   const restored = restoreDraft();
   renderAll();
   updateHint();

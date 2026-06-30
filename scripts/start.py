@@ -16,10 +16,12 @@
 import argparse
 import functools
 import http.server
+import json
 import os
 import socket
 import socketserver
 import sys
+import tempfile
 import threading
 import time
 import webbrowser
@@ -106,11 +108,176 @@ class RangeRequestHandler(http.server.SimpleHTTPRequestHandler):
             "  %s - %s - %s\n" % (ts, self.address_string(), format % args)
         )
 
+    # ------------------------------------------------------------------
+    # API：POST /api/compress —— 接收 GLB 文件，调用 gltf-transform 压缩后返回
+    # ------------------------------------------------------------------
+    def do_OPTIONS(self):
+        """CORS 预检（同源其实不需要，保险起见返回 204）。"""
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_POST(self):
+        if self.path == "/api/compress":
+            self._handle_compress()
+        else:
+            self._send_json(404, {"ok": False, "error": "未知接口"})
+
+    def _handle_compress(self):
+        # 1. 读完整请求体
+        length = int(self.headers.get("Content-Length", 0))
+        if length <= 0:
+            self._send_json(400, {"ok": False, "error": "请求体为空"})
+            return
+        body = self.rfile.read(length)
+
+        # 2. 解析 multipart/form-data，取出文件字节与质量档
+        ctype = self.headers.get("Content-Type", "")
+        if "multipart/form-data" not in ctype:
+            self._send_json(400, {"ok": False, "error": "需要 multipart/form-data"})
+            return
+        fields = self._parse_multipart(body, ctype)
+        file_field = fields.get("file")
+        quality_raw = fields.get("quality", {})
+        quality = (quality_raw.get("data") or b"medium").decode("utf-8", "replace")
+        if not file_field or not file_field.get("data"):
+            self._send_json(400, {"ok": False, "error": "未收到 GLB 文件"})
+            return
+
+        src_name = file_field.get("filename", "upload.glb")
+        if not src_name.lower().endswith(".glb"):
+            self._send_json(400, {"ok": False, "error": "仅支持 .glb 文件"})
+            return
+
+        # 3. 落盘到临时文件再压缩（gltf-transform 只处理磁盘文件）
+        tmpdir = tempfile.mkdtemp(prefix="glb_compress_")
+        tmp_src = os.path.join(tmpdir, "input.glb")
+        tmp_dst = os.path.join(tmpdir, "output.glb")
+        try:
+            with open(tmp_src, "wb") as f:
+                f.write(file_field["data"])
+
+            cm = self._load_compress_module()
+            if cm is None:
+                self._send_json(500, {"ok": False,
+                    "error": "服务器找不到压缩模块 compress_model.py"})
+                return
+
+            result = cm.compress_glb(tmp_src, tmp_dst, quality)
+
+            if not result["ok"]:
+                self._send_json(500, {"ok": False, "error": result["error"]})
+                return
+
+            # 4. 成功：返回压缩后的 GLB 字节
+            with open(tmp_dst, "rb") as f:
+                compressed = f.read()
+            self.send_response(200)
+            self.send_header("Content-Type", "model/gltf-binary")
+            self.send_header("Content-Length", str(len(compressed)))
+            # 声明自定义头可被前端 JS 读取（同源不需要，分离部署时需要）
+            self.send_header("Access-Control-Expose-Headers",
+                             "X-Src-Size, X-Dst-Size, X-Ratio, X-Desc")
+            # 元信息放响应头，前端读 X-*
+            self.send_header("X-Src-Size", str(result["src_size"]))
+            self.send_header("X-Dst-Size", str(result["dst_size"]))
+            self.send_header("X-Ratio", "%.1f" % result["ratio"])
+            # X-Desc 含中文，ASCII 头用 backslashreplace 转义避免编码问题
+            self.send_header("X-Desc", result["profile_desc"].encode("ascii", "backslashreplace").decode("ascii"))
+            self.end_headers()
+            self.wfile.write(compressed)
+        finally:
+            # 清理临时文件（compress_glb 内部的 .tmp1.glb 也在此目录）
+            import shutil
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def _parse_multipart(self, body, ctype):
+        """轻量解析 multipart/form-data，返回 {field: {data, filename}}。
+
+        标准库无现成 multipart 解析，这里按 boundary 切分二进制 body。
+        仅处理本接口需要的简单表单（一个文件 + 一个文本字段）。
+        """
+        fields = {}
+        # 取 boundary（Content-Type: multipart/form-data; boundary=...）
+        boundary = None
+        for part in ctype.split(";"):
+            part = part.strip()
+            if part.startswith("boundary="):
+                boundary = part[len("boundary="):].strip('"')
+                break
+        if not boundary:
+            return fields
+        delim = b"--" + boundary.encode("ascii")
+
+        # 按分隔符切块。每个 part 形如：头\r\n\r\n数据\r\n
+        # 注意：不能用 strip() 处理整个 seg，否则文件数据首尾的 \r\n 会被误删（数据损坏）。
+        segments = body.split(delim)
+        for seg in segments:
+            # 跳过前导 preamble 和结尾 "--"
+            if not seg or seg in (b"--", b"--\r\n"):
+                continue
+            # 定位头与数据的分界 \r\n\r\n
+            header_end = seg.find(b"\r\n\r\n")
+            if header_end < 0:
+                continue
+            header_bytes = seg[:header_end].decode("utf-8", "replace")
+            data = seg[header_end + 4:]
+            # part 数据末尾的 \r\n 是 multipart 终止符，精确去掉这一个，
+            # 绝不能用 strip（会误伤文件内部首尾的 \r\n 字节）。
+            if data.endswith(b"\r\n"):
+                data = data[:-2]
+            # 解析头里的 name 和 filename
+            name = None
+            filename = None
+            for line in header_bytes.split("\r\n"):
+                if line.lower().startswith("content-disposition:"):
+                    for kv in line.split(";"):
+                        kv = kv.strip()
+                        if kv.startswith("name="):
+                            name = kv[5:].strip('"')
+                        elif kv.startswith("filename="):
+                            filename = kv[9:].strip('"')
+            if name:
+                fields[name] = {"data": data, "filename": filename}
+        return fields
+
+    def _load_compress_module(self):
+        """动态加载 compress_model 模块（开发模式从 scripts/，打包模式从 _MEIPASS/）。"""
+        import importlib.util
+        path = _resolve_compress_path()
+        if not path or not os.path.isfile(path):
+            return None
+        spec = importlib.util.spec_from_file_location("compress_model", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def _send_json(self, code, payload):
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+
+def _resolve_compress_path():
+    """定位 compress_model.py：开发模式用 scripts/，打包模式用 sys._MEIPASS/。"""
+    if getattr(sys, "frozen", False):
+        base = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+        return os.path.join(base, "compress_model.py")
+    # 开发模式：本文件在 scripts/ 下，compress_model.py 在同级
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(here, "compress_model.py")
+
+
 
 # ---------------------------------------------------------------------------
 # 带端口复用、优雅退出的服务器
+# 用 ThreadingTCPServer：压缩接口耗时数秒~数十秒，多线程避免阻塞静态请求。
 # ---------------------------------------------------------------------------
-class ReusableServer(socketserver.TCPServer):
+class ReusableServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
     daemon_threads = True
 

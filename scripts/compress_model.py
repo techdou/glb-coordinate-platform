@@ -127,15 +127,19 @@ def try_gltf_transform(src, dst, profile, npx_cmd):
         tmp_tex = dst + '.tmp1.glb'
 
     try:
-        # 步骤 1：纹理压缩（可选）
+        # 歄骤 1：纹理压缩（可选）。无纹理模型会让 webp 子命令报错，
+        # 此时降级为直接用原始文件走 DRACO（几何压缩对无纹理模型仍有意义）。
         if tmp_tex:
             print("  [纹理转 WebP q=%d]" % p['quality'])
             tex_cmd = prefix + ['webp', src, tmp_tex, '--quality', str(p['quality'])]
             r = run_capture(tex_cmd)
             if r is None or r.returncode != 0 or not os.path.isfile(tmp_tex):
-                msg = (r.stderr or r.stdout) if r else "命令未找到"
-                return False, "纹理转 WebP 失败：%s" % msg.strip()
-            draco_src = tmp_tex
+                # webp 失败：降级，用原始文件继续 DRACO
+                msg = (r.stderr or r.stdout).strip() if r else "命令未找到"
+                print(C.yellow("  纹理压缩跳过（%s），改为仅 DRACO" % msg))
+                draco_src = src
+            else:
+                draco_src = tmp_tex
         else:
             draco_src = src
 
@@ -180,6 +184,47 @@ def run_capture(cmd):
         return None
 
 
+def compress_glb(src, dst, quality='medium'):
+    """
+    压缩单个 GLB 文件（DRACO + 纹理优化），供 CLI 与 HTTP API 共用。
+
+    参数：
+        src     输入 GLB 文件路径（必须存在）
+        dst     输出 GLB 文件路径
+        quality high/medium/low
+    返回 dict：
+        {ok, error, src_size, dst_size, ratio, profile_desc, message}
+        ok=False 时 error 含可读错误（含 Node.js/npx 缺失提示）。
+    """
+    profile = QUALITY_PROFILES.get(quality, QUALITY_PROFILES['medium'])
+    if not os.path.isfile(src):
+        return dict(ok=False, error='找不到输入文件 %s' % src,
+                    src_size=0, dst_size=0, ratio=0,
+                    profile_desc=profile['desc'], message='输入文件不存在')
+
+    src_size = os.path.getsize(src)
+    npx_cmd = detect_npx()
+    success, error = try_gltf_transform(src, dst, quality, npx_cmd)
+
+    if not success:
+        # 错误信息附上排查指引，前端可直接展示
+        hint = (' | 排查：1) 确认已联网（首次 npx 下载 %s）；'
+                '2) 或全局安装：npm install -g %s；'
+                '3) 手动验证：%s --version') % (
+                    GLTF_TRANSFORM_PKG, GLTF_TRANSFORM_PKG, GLTF_TRANSFORM_BIN)
+        return dict(ok=False, error=(error or '压缩失败') + hint,
+                    src_size=src_size, dst_size=0, ratio=0,
+                    profile_desc=profile['desc'], message='压缩失败')
+
+    dst_size = os.path.getsize(dst) if os.path.isfile(dst) else 0
+    ratio = (1 - dst_size / src_size) * 100 if src_size else 0
+    return dict(ok=True, error=None,
+                src_size=src_size, dst_size=dst_size, ratio=ratio,
+                profile_desc=profile['desc'],
+                message='压缩完成：%s → %s，缩减 %.1f%%' % (
+                    human_size(src_size), human_size(dst_size), ratio))
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="GLB 模型压缩工具（DRACO + 纹理优化）",
@@ -194,38 +239,24 @@ def main():
                         default='medium', help='压缩质量档位（默认 medium）')
     args = parser.parse_args()
 
-    src = args.input
-    dst = args.output
-
-    if not os.path.isfile(src):
-        print(C.red("错误：找不到输入文件 %s" % src), file=sys.stderr)
-        return 1
-
-    src_size = os.path.getsize(src)
+    src_size = os.path.getsize(args.input) if os.path.isfile(args.input) else 0
     print(C.cyan(C.bold("GLB 模型压缩")))
-    print("  输入 : %s (%s)" % (src, human_size(src_size)))
-    print("  输出 : %s" % dst)
+    print("  输入 : %s (%s)" % (args.input, human_size(src_size)))
+    print("  输出 : %s" % args.output)
+    print("  质量 : %s（%s）" % (args.quality, QUALITY_PROFILES[args.quality]['desc']))
     print("-" * 50)
 
-    npx_cmd = detect_npx()
-    success, error = try_gltf_transform(src, dst, args.quality, npx_cmd)
+    result = compress_glb(args.input, args.output, args.quality)
 
-    if not success:
-        print(C.red("\n压缩失败：%s" % error), file=sys.stderr)
-        print(C.yellow("排查建议："))
-        print("  1. 确认已联网（首次 npx 会下载 %s）" % GLTF_TRANSFORM_PKG)
-        print("  2. 或全局安装：npm install --global %s" % GLTF_TRANSFORM_PKG)
-        print("  3. 手动测试：%s --version" % GLTF_TRANSFORM_BIN)
-        print("  4. 或改用 Blender 导出压缩 GLB（File > Export > glTF，勾选 Draco）")
+    if not result['ok']:
+        print(C.red("\n压缩失败：%s" % result['error']), file=sys.stderr)
         return 1
 
-    dst_size = os.path.getsize(dst)
-    ratio = (1 - dst_size / src_size) * 100 if src_size else 0
     print(C.green("\n压缩完成 ✓"))
-    print("  原始 : %s" % human_size(src_size))
-    print("  压缩 : %s" % human_size(dst_size))
-    print("  缩减 : %.1f%%" % ratio)
-    print(C.green("  坐标采集工具会自动优先加载压缩版。"))
+    print("  原始 : %s" % human_size(result['src_size']))
+    print("  压缩 : %s" % human_size(result['dst_size']))
+    print("  缩减 : %.1f%%" % result['ratio'])
+    print(C.green("  压缩后的 GLB 可在工具里点「选择 GLB / STL 模型」导入使用。"))
     return 0
 
 

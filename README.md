@@ -71,7 +71,8 @@ glb-coordinate-platform/
 │   │   ├── loader.js             # 模型加载 + 采点 + marker + 视角
 │   │   ├── structures.js         # 清单解析（5 种格式）
 │   │   ├── ui.js                 # 列表/统计/提示/toast/清空渲染
-│   │   └── export.js             # 导出坐标/工程/草稿、迁移旧版坐标
+│   │   ├── export.js             # 导出坐标/工程/草稿、迁移旧版坐标
+│   │   └── compress.js           # 网页内 GLB 压缩（对接 /api/compress）
 │   ├── vendor/three/             # 离线 three.js v0.160（含 DRACO 解码器）
 │   └── examples/ljw/             # 清单格式样例（仅 structures.json，模型自带）
 ├── scripts/
@@ -118,13 +119,21 @@ python build.py --clean      # 执行打包
 
 ## 压缩模型（可选）
 
-103MB 的示例模型可用压缩脚本大幅减小体积：
+GLB 模型可用 DRACO 几何压缩 + 纹理优化大幅减小体积（通常 60%–80%），加载更快。有两种方式：
+
+**方式一：网页内压缩（推荐）**
+
+工具栏点 **压缩 GLB** → 选 GLB 文件和质量档位 → 服务器用 gltf-transform 压缩 → 自动下载压缩版。前提是运行环境装了 **Node.js**（自带 npx，首次会自动拉取 gltf-transform）。
+
+**方式二：命令行压缩**
 
 ```bash
-python scripts/compress_model.py
-# 或压缩任意模型：python scripts/compress_model.py 输入.glb 输出.glb --quality medium
+# 压缩任意模型
+python scripts/compress_model.py 输入.glb 输出.glb --quality medium
+# 或用打包好的 exe
+CoordinateCollector.exe --compress 输入.glb 输出.glb --quality medium
 ```
 
-需 Node.js（首次通过 npx 自动获取 gltf-transform）。压缩后的 GLB 体积更小、加载更快，可在界面里点「选择 GLB / STL 模型」自行导入使用（压缩仅支持 GLB，STL 无需此步骤）。
+压缩仅支持 GLB（STL 无需此步骤）。压缩后的 GLB 可在界面里点「选择 GLB / STL 模型」导入使用。
 
 详见 [docs/通用工具使用说明.md](docs/通用工具使用说明.md)。

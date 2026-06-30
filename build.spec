@@ -60,6 +60,8 @@ hidden_imports = [
     'socketserver',
     'argparse', 'functools', 'socket', 'threading', 'time', 'webbrowser',
     'shutil', 'subprocess',
+    # /api/compress 接口用到的标准库（start.py 动态加载，需显式声明）
+    'tempfile', 'json', 'email',
 ]
 
 a_analysis = Analysis(

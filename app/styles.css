@@ -409,6 +409,64 @@ textarea {
   line-height: 1.55;
 }
 
+/* 压缩对话框 */
+.compress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.compress-row label {
+  flex: 0 0 64px;
+  color: var(--muted);
+}
+.compress-row select {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  background: #0e1419;
+  outline: none;
+  font-size: 12px;
+}
+.compress-row select:focus { border-color: var(--blue); }
+.compress-file {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #d7e5ed;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+}
+.compress-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.compress-status.progress {
+  background: rgba(112, 168, 255, .08);
+  border: 1px solid rgba(112, 168, 255, .3);
+  color: #b8d4ff;
+}
+.compress-status.success {
+  background: rgba(65, 197, 142, .1);
+  border: 1px solid rgba(65, 197, 142, .35);
+  color: #b7f6d6;
+}
+.compress-status.error {
+  background: rgba(239, 107, 115, .1);
+  border: 1px solid rgba(239, 107, 115, .35);
+  color: #ffc4c8;
+}
+
 @media (max-width: 820px) {
   #app { grid-template-columns: 1fr; grid-template-rows: 42vh 58vh; }
   #sidebar { grid-row: 2; border-right: none; border-top: 1px solid var(--line); min-height: 0; }
