@@ -15,6 +15,7 @@ export const state = {
   modelLabel: '',
   modelFileSize: null,
   modelSha256: null,
+  modelFile: null,   // 当前加载的原始 File 对象（用于导展示页打包，刷新后丢失）
   markers: new Map(),
   migrationBackup: null,
   lastPointerDown: null,

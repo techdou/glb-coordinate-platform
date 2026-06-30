@@ -46,6 +46,7 @@ export async function loadModel(url, label, file = null) {
     state.modelLabel = label;
     state.modelFileSize = identity.size;
     state.modelSha256 = identity.sha256;
+    state.modelFile = file;   // 存住原始 File，供「导展示页」打包导出
 
     const originalBox = new THREE.Box3().setFromObject(state.modelRoot);
     const center = originalBox.getCenter(new THREE.Vector3());

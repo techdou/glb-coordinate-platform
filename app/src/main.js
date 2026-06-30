@@ -16,6 +16,7 @@ import {
   undoLegacyMigration, exportDraftFile, importDraftFile
 } from './export.js';
 import { initCompress } from './compress.js';
+import { initExportDemo } from './export-demo.js';
 
 // ---------------------------------------------------------------------------
 // DOM 元素
@@ -171,6 +172,7 @@ window.addEventListener('beforeunload', (event) => {
 // ---------------------------------------------------------------------------
 async function init() {
   initCompress();
+  initExportDemo();
   const restored = restoreDraft();
   renderAll();
   updateHint();

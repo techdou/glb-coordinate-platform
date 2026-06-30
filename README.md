@@ -72,7 +72,8 @@ glb-coordinate-platform/
 │   │   ├── structures.js         # 清单解析（5 种格式）
 │   │   ├── ui.js                 # 列表/统计/提示/toast/清空渲染
 │   │   ├── export.js             # 导出坐标/工程/草稿、迁移旧版坐标
-│   │   └── compress.js           # 网页内 GLB 压缩（对接 /api/compress）
+│   │   ├── compress.js           # 网页内 GLB 压缩（对接 /api/compress）
+│   │   └── export-demo.js        # 导出示例展示页 zip（对接 /api/export-demo）
 │   ├── vendor/three/             # 离线 three.js v0.160（含 DRACO 解码器）
 │   └── examples/ljw/             # 清单格式样例（仅 structures.json，模型自带）
 ├── scripts/
@@ -137,3 +138,18 @@ CoordinateCollector.exe --compress 输入.glb 输出.glb --quality medium
 压缩仅支持 GLB（STL 无需此步骤）。压缩后的 GLB 可在界面里点「选择 GLB / STL 模型」导入使用。
 
 详见 [docs/通用工具使用说明.md](docs/通用工具使用说明.md)。
+
+## 导展示页（供二次开发参考）
+
+打完点后，点工具栏的 **导展示页(zip)**，会把当前模型 + 坐标打包成一个**可直接运行的示例展示页** zip：
+
+```
+demo_<时间戳>.zip 解压后：
+├── index.html    # 示例页（CDN three.js，含侧边名称列表联动，双击即开）
+├── data.json     # 坐标 + 元信息（数据契约，给 agent 参考）
+└── model.glb     # 模型文件（导出时未加载模型则省略）
+```
+
+**用途**：把这个 zip 发给 agent / 开发者做 3D 仿真展示二次开发。示例页已正确实现坐标对齐（复现打标工具的居中逻辑 + `localToWorld` 换算），是定点不跑偏的参考实现。
+
+> 示例页用 CDN three.js r160，打开需联网。如需离线，可把 `index.html` 里的 importmap 指向本地 three.js。

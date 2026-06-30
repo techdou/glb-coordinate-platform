@@ -66,16 +66,16 @@ export function exportFullProject() {
   state.dirty = false;
 }
 
-function vectorToPlain(vector) {
+export function vectorToPlain(vector) {
   return vector ? [round(vector.x), round(vector.y), round(vector.z)] : null;
 }
 
-function boxToPlain(box) {
+export function boxToPlain(box) {
   if (!box) return null;
   return { min: vectorToPlain(box.min), max: vectorToPlain(box.max) };
 }
 
-function sizeToPlain(box) {
+export function sizeToPlain(box) {
   if (!box) return null;
   return vectorToPlain(box.getSize(new THREE.Vector3()));
 }
