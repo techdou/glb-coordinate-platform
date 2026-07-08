@@ -30,8 +30,9 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.screenSpacePanning = true;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x34404a, 1.1));
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
+export const hemiLight = new THREE.HemisphereLight(0xffffff, 0x34404a, 1.1);
+scene.add(hemiLight);
+export const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
 keyLight.position.set(3, 5, 4);
 scene.add(keyLight);
 
@@ -50,5 +51,47 @@ loader.setDRACOLoader(draco);
 
 // STL 加载器（无 Draco 依赖，独立实例）
 export const stlLoader = new STLLoader();
+
+// ---------------------------------------------------------------------------
+// 主题色：three.js 颜色无法用 CSS 变量，这里集中管理，供 theme.js 切换时调用。
+// ---------------------------------------------------------------------------
+const THEME_COLORS = {
+  dark: {
+    background: 0x0b1117,
+    hemiGround: 0x34404a,
+    gridMain: 0x3a4d5c,
+    gridSub: 0x1f2a33,
+  },
+  light: {
+    background: 0xeef1f5,
+    hemiGround: 0xc8d0d8,
+    gridMain: 0xb8c2cc,
+    gridSub: 0xdfe4e8,
+  },
+};
+
+let currentTheme = 'dark';
+
+// 切换场景（背景/灯光/网格）颜色，由 theme.js 调用。
+export function updateSceneTheme(theme) {
+  currentTheme = theme;
+  const c = THEME_COLORS[theme] || THEME_COLORS.dark;
+  scene.background.setHex(c.background);
+  hemiLight.groundColor.setHex(c.hemiGround);
+  // GridHelper 颜色刻在 geometry 顶点属性里，运行时无法改；
+  // 用 material.color 改整体色调（副线主导），主线保持原色，视觉影响可接受。
+  grid.material.color.setHex(c.gridSub);
+}
+
+export function getTheme() {
+  return currentTheme;
+}
+
+// marker 颜色（loader.js 也用）：返回当前主题对应的标记点配色。
+export function getMarkerColors() {
+  return currentTheme === 'light'
+    ? { active: 0xc08828, done: 0x2d9e6f }
+    : { active: 0xe6b450, done: 0x41c58e };
+}
 
 export { THREE };

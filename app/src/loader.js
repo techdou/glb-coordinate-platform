@@ -1,5 +1,5 @@
 // 模型加载、SHA-256 指纹、raycast 采点、marker 网格管理。
-import { THREE, scene, camera, controls, grid, renderer, loader, stlLoader, raycaster, pointer, hint } from './scene.js';
+import { THREE, scene, camera, controls, grid, renderer, loader, stlLoader, raycaster, pointer, hint, getMarkerColors } from './scene.js';
 import { state, round, firstUncollectedIndex, saveDraft } from './state.js';
 import { showToast, renderAll, setProgress, updateHint } from './ui.js';
 
@@ -154,9 +154,7 @@ export function collectAtPointer(event) {
 // marker 网格管理
 // ---------------------------------------------------------------------------
 
-// 当前激活项用金色，其余用绿色。
-const COLOR_ACTIVE = 0xe6b450;
-const COLOR_DONE = 0x41c58e;
+// marker 配色随主题变化（从 scene.js 的 getMarkerColors 动态读取）。
 
 export function placeMarker(index, localCoord) {
   if (!state.modelRoot || !localCoord) return;
@@ -165,8 +163,9 @@ export function placeMarker(index, localCoord) {
   const world = state.modelRoot.localToWorld(new THREE.Vector3(...localCoord));
   const radius = markerRadius();
   const geometry = new THREE.SphereGeometry(radius, 18, 18);
+  const colors = getMarkerColors();
   const material = new THREE.MeshBasicMaterial({
-    color: index === state.activeIndex ? COLOR_ACTIVE : COLOR_DONE
+    color: index === state.activeIndex ? colors.active : colors.done
   });
   const marker = new THREE.Mesh(geometry, material);
   marker.position.copy(world);
@@ -192,10 +191,11 @@ export function removeMarker(index) {
   }
 }
 
-// 选中项变化时只重设颜色，不重建网格（比 rebuildMarkers 轻量）。
+// 选中项变化或主题切换时只重设颜色，不重建网格（比 rebuildMarkers 轻量）。
 export function refreshMarkerColors() {
+  const colors = getMarkerColors();
   for (const [index, marker] of state.markers) {
-    marker.material.color.setHex(index === state.activeIndex ? COLOR_ACTIVE : COLOR_DONE);
+    marker.material.color.setHex(index === state.activeIndex ? colors.active : colors.done);
   }
 }
 

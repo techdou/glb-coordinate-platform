@@ -17,6 +17,7 @@ import {
 } from './export.js';
 import { initCompress } from './compress.js';
 import { initExportDemo } from './export-demo.js';
+import { initTheme } from './theme.js';
 
 // ---------------------------------------------------------------------------
 // DOM 元素
@@ -171,6 +172,7 @@ window.addEventListener('beforeunload', (event) => {
 // 初始化（通用化：空白启动，不自动加载任何模型/清单）
 // ---------------------------------------------------------------------------
 async function init() {
+  initTheme();
   initCompress();
   initExportDemo();
   const restored = restoreDraft();
