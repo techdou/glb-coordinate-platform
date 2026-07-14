@@ -386,14 +386,9 @@ _DEMO_HTML_TEMPLATE = Template(r"""<!DOCTYPE html>
 <body>
 <div id="app">
   <aside id="sidebar">
-    <div class="sb-head">
-      <h1>${title}</h1>
-      <p>${point_count} 个点位 · GLB 局部坐标系 · 点击列表飞行定位</p>
-    </div>
     <ul id="list"></ul>
   </aside>
   <main id="viewer">
-    <div class="banner info">模型：<code>${model_file}</code> · ${point_count} 个点位 · 拖拽旋转/滚轮缩放/右键平移 · 首次打开需联网加载 three.js</div>
     ${no_model_hint}
     <div id="label"></div>
   </main>
@@ -413,6 +408,7 @@ _DEMO_HTML_TEMPLATE = Template(r"""<!DOCTYPE html>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 
 const DATA = window.__DEMO_DATA__;
@@ -437,9 +433,13 @@ function loadModelFile(url) {
       }, undefined, reject);
     });
   }
-  // glb / gltf
+  // glb / gltf（配 DRACO 解码器，支持 DRACO 压缩模型）
+  const gltfLoader = new GLTFLoader();
+  const draco = new DRACOLoader();
+  draco.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');
+  gltfLoader.setDRACOLoader(draco);
   return new Promise((resolve, reject) => {
-    new GLTFLoader().load(url, (gltf) => resolve(gltf.scene), undefined, reject);
+    gltfLoader.load(url, (gltf) => resolve(gltf.scene), undefined, reject);
   });
 }
 
@@ -495,8 +495,10 @@ loadModelFile(MODEL_FILE).then((model) => {
 }, undefined, (err) => {
   // 模型加载失败：仍渲染标记点（在原点附近，仅示意坐标）
   console.error('模型加载失败', err);
-  document.querySelector('.banner.info').innerHTML =
-    '模型加载失败：<code>' + MODEL_FILE + '</code>。请确认模型文件与本 HTML 同目录。坐标数据见 <code>data.json</code>。';
+  const tip = document.createElement('div');
+  tip.style.cssText = 'position:absolute;top:12px;left:12px;right:12px;padding:10px 14px;background:rgba(180,40,40,.9);color:#fff;border-radius:7px;font-size:13px;z-index:10';
+  tip.textContent = '模型加载失败：' + MODEL_FILE + '。请确认模型文件与本 HTML 同目录，且未损坏。坐标数据见 data.json。';
+  viewer.appendChild(tip);
   placeMarkers(new THREE.Group());  // 无模型时仍放标记（基于局部坐标原点）
   renderList();
   animate();

@@ -140,13 +140,13 @@ export function collectAtPointer(event) {
   state.dirty = true;
   saveDraft();
 
-  const next = firstUncollectedIndex(state.activeIndex + 1);
-  state.activeIndex = next;
+  // 不自动跳转：保持当前选中项，由用户自主点击列表切换下一个。
   renderAll();
-  if (next >= 0) {
-    showToast(`已记录「${item.name}」，下一个：${state.structures[next].name}`);
+  const allDone = state.structures.every(s => s.center);
+  if (allDone) {
+    showToast(`已记录「${item.name}」，全部点位采集完成，可导出坐标 JSON`);
   } else {
-    showToast('全部点位采集完成，可以导出坐标 JSON');
+    showToast(`已记录「${item.name}」的坐标，可在列表点击切换下一个`);
   }
 }
 

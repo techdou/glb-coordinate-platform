@@ -1,5 +1,5 @@
 // 应用入口：初始化、事件绑定、渲染循环。
-import { THREE, scene, camera, renderer, controls, viewer, readout } from './scene.js';
+import { THREE, scene, camera, renderer, controls, viewer, readout, raycaster, pointer } from './scene.js';
 import { state, restoreDraft, escapeHtml, round, firstUncollectedIndex, saveDraft } from './state.js';
 import { normalizeStructures, parsePastedText } from './structures.js';
 import {
@@ -9,7 +9,7 @@ import {
 import {
   setMode, renderAll, renderList, updateHint, showToast,
   clearCoordinates, clearCoordsOnly, clearAll,
-  clearSelectedCoords, selectAll, clearSelection
+  clearSelectedCoords, selectAll, clearSelection, selectItem
 } from './ui.js';
 import {
   exportNameMap, exportFullProject, migrateLegacyCenteredCoordinates,
@@ -159,6 +159,31 @@ renderer.domElement.addEventListener('pointerup', (event) => {
 });
 
 // ---------------------------------------------------------------------------
+// 右键点击：选中已标注的点（marker），命中则切换激活项并飞行定位
+// ---------------------------------------------------------------------------
+renderer.domElement.addEventListener('contextmenu', (event) => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  // 检测 marker 网格
+  const markerMeshes = [...state.markers.values()];
+  const hits = raycaster.intersectObjects(markerMeshes, false);
+  if (hits.length) {
+    event.preventDefault();
+    // 找到命中的 marker 对应的 index
+    const hitMesh = hits[0].object;
+    for (const [index, mesh] of state.markers) {
+      if (mesh === hitMesh) {
+        selectItem(index);
+        showToast(`已选中「${state.structures[index]?.name}」`);
+        break;
+      }
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
 // 窗口事件
 // ---------------------------------------------------------------------------
 window.addEventListener('resize', resize);
@@ -198,12 +223,56 @@ function applyPastedList() {
     return;
   }
   try {
-    const structures = parsePastedText(text);
-    replaceStructures(structures, `已载入 ${structures.length} 个名称`);
+    const incoming = parsePastedText(text);
+    mergeStructures(incoming, `已合并 ${incoming.length} 个名称`);
     pasteDialog.close();
   } catch (error) {
     showToast(`列表解析失败：${error.message}`, true);
   }
+}
+
+// ---------------------------------------------------------------------------
+// 合并名称列表（append 语义）：保留已有坐标，追加新名称，不覆盖前期工作。
+// ---------------------------------------------------------------------------
+function mergeStructures(incoming, message) {
+  // 以名称为键建立已有项索引，保留 center/status/size_real 等已采集信息
+  const existingByName = new Map();
+  state.structures.forEach(item => existingByName.set(item.name, item));
+
+  const merged = [];
+  const seen = new Set();
+  // 先处理 incoming（保留 incoming 的顺序，作为新清单骨架）
+  for (const inc of incoming) {
+    const old = existingByName.get(inc.name);
+    if (old) {
+      // 已存在：保留坐标与状态，可更新元信息（size_real/count/note）
+      merged.push({
+        ...old,
+        size_real: inc.size_real ?? old.size_real,
+        count: inc.count ?? old.count,
+        note: inc.note ?? old.note
+      });
+      seen.add(inc.name);
+    } else {
+      // 新名称：直接追加
+      merged.push(inc);
+    }
+  }
+  // 旧列表里有但 incoming 里没有的项：保留（避免误删已采集的项）
+  for (const old of state.structures) {
+    if (!seen.has(old.name) && !incoming.some(i => i.name === old.name)) {
+      merged.push(old);
+    }
+  }
+
+  state.structures = merged;
+  state.activeIndex = firstUncollectedIndex();
+  state.selected.clear();
+  state.dirty = true;
+  rebuildMarkers();
+  saveDraft();
+  renderAll();
+  showToast(message);
 }
 
 // ---------------------------------------------------------------------------

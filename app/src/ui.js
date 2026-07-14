@@ -97,7 +97,8 @@ export function updateListAction() {
   btnSelectAll.textContent = (count >= visibleTotal && count > 0) ? '取消全选' : '全选';
 }
 
-function selectItem(index) {
+// 选中列表项：设为激活、飞行定位、刷新 marker 颜色。供列表点击与右键选中 marker 调用。
+export function selectItem(index) {
   state.activeIndex = index;
   if (state.mode === 'browse' && state.structures[index]?.center) {
     flyToLocalCoord(state.structures[index].center);
@@ -203,19 +204,18 @@ export function clearSelectedCoords() {
   for (const index of indices) {
     const item = state.structures[index];
     if (!item) continue;
-    if (item.center) {
-      item.center = null;
-      item.status = '待采集';
-      removeMarker(index);
-      cleared++;
-    }
+    // 统一清空：无论原来有无坐标，都置空 center、删 marker、重置状态。
+    if (item.center) cleared++;
+    item.center = null;
+    item.status = '待采集';
+    removeMarker(index);
   }
   state.selected.clear();
   if (state.activeIndex < 0) state.activeIndex = firstUncollectedIndex();
   state.dirty = true;
   saveDraft();
   renderAll();
-  showToast(cleared ? `已清空 ${cleared} 个选中名称的坐标` : '所选名称本来就没有坐标');
+  showToast(cleared ? `已清空 ${cleared} 个选中名称的坐标` : `已重置 ${indices.length} 个选中项（原无坐标）`);
 }
 
 // 全选 / 取消全选（作用于当前列表的全部项）。
