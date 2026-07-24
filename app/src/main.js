@@ -30,18 +30,33 @@ const pasteText = document.getElementById('pasteText');
 const clearDialog = document.getElementById('clearDialog');
 
 // ---------------------------------------------------------------------------
-// 按钮事件
+// 按钮事件（高频按钮直接绑定，低频走「更多」菜单）
 // ---------------------------------------------------------------------------
 document.getElementById('btnModel').addEventListener('click', () => modelInput.click());
 document.getElementById('btnJson').addEventListener('click', () => jsonInput.click());
 document.getElementById('btnPaste').addEventListener('click', openPasteDialog);
 document.getElementById('btnExportMap').addEventListener('click', exportNameMap);
-document.getElementById('btnExportFull').addEventListener('click', exportFullProject);
-document.getElementById('btnExportDraft').addEventListener('click', exportDraftFile);
-document.getElementById('btnImportDraft').addEventListener('click', () => draftInput.click());
-document.getElementById('btnMigrateLegacy').addEventListener('click', migrateLegacyCenteredCoordinates);
-document.getElementById('btnUndoMigrate').addEventListener('click', undoLegacyMigration);
-document.getElementById('btnClear').addEventListener('click', clearCoordinates);
+// 「更多」菜单项绑定到原逻辑
+document.getElementById('mExportFull').addEventListener('click', exportFullProject);
+document.getElementById('mExportDraft').addEventListener('click', exportDraftFile);
+document.getElementById('mImportDraft').addEventListener('click', () => draftInput.click());
+document.getElementById('mMigrateLegacy').addEventListener('click', migrateLegacyCenteredCoordinates);
+document.getElementById('mUndoMigrate').addEventListener('click', undoLegacyMigration);
+document.getElementById('mClear').addEventListener('click', clearCoordinates);
+
+// 「更多」菜单：点击切换显示，点外部/选中项后自动关闭
+const btnMore = document.getElementById('btnMore');
+const moreMenu = document.getElementById('moreMenu');
+btnMore.addEventListener('click', (e) => {
+  e.stopPropagation();
+  moreMenu.hidden = !moreMenu.hidden;
+});
+// 点击菜单项后自动收起
+moreMenu.addEventListener('click', () => { moreMenu.hidden = true; });
+// 点外部关闭菜单
+document.addEventListener('click', (e) => {
+  if (!moreMenu.hidden && !e.target.closest('.more-wrap')) moreMenu.hidden = true;
+});
 
 document.getElementById('modeCollect').addEventListener('click', () => setMode('collect'));
 document.getElementById('modeBrowse').addEventListener('click', () => setMode('browse'));
@@ -191,6 +206,52 @@ window.addEventListener('beforeunload', (event) => {
   if (!state.dirty) return;
   event.preventDefault();
   event.returnValue = '';
+});
+
+// ---------------------------------------------------------------------------
+// 键盘快捷键：提升采集效率（对话框打开时禁用，避免冲突）
+// ---------------------------------------------------------------------------
+window.addEventListener('keydown', (event) => {
+  // 对话框打开或输入框聚焦时不响应快捷键
+  const tag = event.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (document.querySelector('dialog[open]')) return;
+
+  const n = state.structures.length;
+  if (!n) return;
+
+  switch (event.key) {
+    case 'Enter': {
+      // Enter：跳到下一个未采集项
+      event.preventDefault();
+      const next = firstUncollectedIndex(state.activeIndex + 1);
+      if (next >= 0) {
+        selectItem(next);
+        showToast(`下一个：${state.structures[next].name}`);
+      } else {
+        showToast('全部点位已采集完成');
+      }
+      break;
+    }
+    case 'ArrowDown': {
+      event.preventDefault();
+      selectItem(Math.min(state.activeIndex + 1, n - 1));
+      break;
+    }
+    case 'ArrowUp': {
+      event.preventDefault();
+      selectItem(Math.max(state.activeIndex - 1, 0));
+      break;
+    }
+    case 'Escape': {
+      // Esc：取消列表勾选
+      if (state.selected.size) {
+        state.selected.clear();
+        renderList();
+      }
+      break;
+    }
+  }
 });
 
 // ---------------------------------------------------------------------------

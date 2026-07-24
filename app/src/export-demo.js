@@ -6,7 +6,7 @@ import { showToast } from './ui.js';
 import { vectorToPlain, boxToPlain, sizeToPlain } from './export.js';
 
 export function initExportDemo() {
-  const btn = document.getElementById('btnExportDemo');
+  const btn = document.getElementById('mExportDemo');
   if (!btn) return;
   btn.addEventListener('click', exportDemo);
 }

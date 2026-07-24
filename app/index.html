@@ -21,14 +21,23 @@
       <button class="tool-btn" id="btnJson" data-tip="导入一份清单 JSON 文件（支持 5 种格式：名称数组、对象数组、工程格式、名称映射等）">导入 JSON 清单</button>
       <button class="tool-btn" id="btnPaste" data-tip="打开对话框粘贴名称（一行一个，或直接粘贴 JSON）">粘贴名称列表</button>
       <button class="tool-btn good" id="btnExportMap" data-tip="导出最精简的坐标映射 {名称: [x,y,z]}，给业务系统用">导出坐标 JSON</button>
-      <button class="tool-btn" id="btnExportFull" data-tip="导出含模型 SHA-256 指纹、包围盒、坐标的完整工程，便于归档和下次继续">导出完整工程</button>
-      <button class="tool-btn" id="btnExportDraft" data-tip="把当前进度（清单+坐标）导出为文件，可换浏览器/换电脑恢复（模型需另传）">导出草稿</button>
-      <button class="tool-btn good" id="btnExportDemo" data-tip="打包一个可直接运行的示例展示页 zip（含模型+坐标），发给开发者二次开发参考">导展示页(zip)</button>
-      <button class="tool-btn" id="btnImportDraft" data-tip="从之前导出的草稿文件恢复进度">导入草稿</button>
-      <button class="tool-btn" id="btnMigrateLegacy" data-tip="把旧版「居中场景坐标」转换为 GLB 原始局部坐标（仅对优化前工具打的点有效）">迁移旧版坐标</button>
-      <button class="tool-btn" id="btnUndoMigrate" data-tip="撤销最近一次坐标迁移，恢复到迁移前的状态">撤销迁移</button>
-      <button class="tool-btn" id="btnCompress" data-tip="打开对话框压缩 GLB（DRACO+纹理优化，需 Node.js），压缩后体积更小加载更快">压缩 GLB</button>
-      <button class="tool-btn danger" id="btnClear" data-tip="清空已采集的坐标。勾选了列表项时只清选中项，否则弹窗选择清空范围">清空坐标</button>
+      <div class="more-wrap">
+        <button class="tool-btn" id="btnMore" data-tip="更多功能：工程/草稿/展示页/压缩/迁移/清空">更多 ▾</button>
+        <div class="more-menu" id="moreMenu" hidden>
+          <button class="more-item" id="mExportFull" data-tip="导出含模型 SHA-256 指纹、包围盒、坐标的完整工程，便于归档和下次继续">导出完整工程</button>
+          <button class="more-item good" id="mExportDemo" data-tip="打包一个可直接运行的示例展示页 zip（含模型+坐标），发给开发者二次开发参考">导展示页(zip)</button>
+          <div class="more-sep"></div>
+          <button class="more-item" id="mExportDraft" data-tip="把当前进度（清单+坐标）导出为文件，可换浏览器/换电脑恢复（模型需另传）">导出草稿</button>
+          <button class="more-item" id="mImportDraft" data-tip="从之前导出的草稿文件恢复进度">导入草稿</button>
+          <div class="more-sep"></div>
+          <button class="more-item" id="mCompress" data-tip="打开对话框压缩 GLB（DRACO+纹理优化，需 Node.js），压缩后体积更小加载更快">压缩 GLB</button>
+          <div class="more-sep"></div>
+          <button class="more-item" id="mMigrateLegacy" data-tip="把旧版「居中场景坐标」转换为 GLB 原始局部坐标（仅对优化前工具打的点有效）">迁移旧版坐标</button>
+          <button class="more-item" id="mUndoMigrate" data-tip="撤销最近一次坐标迁移，恢复到迁移前的状态">撤销迁移</button>
+          <div class="more-sep"></div>
+          <button class="more-item danger" id="mClear" data-tip="清空已采集的坐标。勾选了列表项时只清选中项，否则弹窗选择清空范围">清空坐标</button>
+        </div>
+      </div>
     </div>
 
     <div class="status-grid">
@@ -65,6 +74,10 @@
     <div class="overlay">
       <div id="hint"></div>
       <div id="readout"></div>
+    </div>
+    <div class="progress-overlay" id="progressOverlay" hidden>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">加载中…</div>
     </div>
     <div class="view-controls">
       <button id="viewFit" title="适配模型">Fit</button>

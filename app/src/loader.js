@@ -1,7 +1,7 @@
 // 模型加载、SHA-256 指纹、raycast 采点、marker 网格管理。
 import { THREE, scene, camera, controls, grid, renderer, loader, stlLoader, raycaster, pointer, hint, getMarkerColors } from './scene.js';
 import { state, round, firstUncollectedIndex, saveDraft } from './state.js';
-import { showToast, renderAll, setProgress, updateHint } from './ui.js';
+import { showToast, renderAll, setProgress, hideProgress, updateHint } from './ui.js';
 
 // STL 统一渲染材质：标准 PBR，外观与 GLB 默认光照协调。
 const STL_MATERIAL = new THREE.MeshStandardMaterial({
@@ -71,7 +71,8 @@ export async function loadModel(url, label, file = null) {
   } catch (error) {
     showToast(`模型加载失败：${error?.message || error}`, true);
   } finally {
-    // setProgress 复用 hint 宀器，加载结束后必须恢复正常提示文案。
+    // 加载结束：隐藏进度条 + 恢复正常提示文案。
+    hideProgress();
     updateHint();
   }
 }

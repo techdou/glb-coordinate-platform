@@ -20,7 +20,7 @@ export function initCompress() {
   runBtn = document.getElementById('compressRun');
   statusEl = document.getElementById('compressStatus');
 
-  document.getElementById('btnCompress').addEventListener('click', openCompressDialog);
+  document.getElementById('mCompress').addEventListener('click', openCompressDialog);
   document.getElementById('compressPick').addEventListener('click', () => fileInputEl.click());
   fileInputEl.addEventListener('change', onFilePicked);
   document.getElementById('compressCancel').addEventListener('click', () => dialogEl.close());

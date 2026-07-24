@@ -129,15 +129,33 @@ export function updateHint() {
   }
   if (state.mode === 'collect') {
     hint.innerHTML = active
-      ? `采集模式：当前选中 <b>${escapeHtml(active.name)}</b>。在模型对应位置单击，坐标会写入该名称并自动跳到下一个。`
+      ? `采集模式：当前选中 <b>${escapeHtml(active.name)}</b>。在模型对应位置单击记录坐标。<br>快捷键：<b>Enter</b> 跳到下一个未采集项，<b>↑↓</b> 上下切换，<b>Esc</b> 取消勾选。`
       : '采集模式：全部名称已经有坐标，可以导出坐标 JSON。';
   } else {
     hint.innerHTML = '浏览模式：点击左侧名称，相机会飞到已采集坐标。没有坐标的名称需要回到采集模式补点。';
   }
 }
 
+// 进度条 DOM（首次使用时获取）
+const progressOverlay = document.getElementById('progressOverlay');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+
+// 设置加载进度：text 可含百分比（如"模型加载中：45%"），自动解析并更新进度条。
 export function setProgress(text) {
   hint.innerHTML = escapeHtml(text);
+  if (!progressOverlay) return;
+  progressOverlay.hidden = false;
+  progressText.textContent = text;
+  // 解析百分比
+  const m = String(text).match(/(\d+(?:\.\d+)?)\s*%/);
+  progressFill.style.width = m ? (m[1] + '%') : '30%';
+}
+
+// 隐藏进度条（加载完成时调用）。
+export function hideProgress() {
+  if (progressOverlay) progressOverlay.hidden = true;
+  if (progressFill) progressFill.style.width = '0%';
 }
 
 // ---------------------------------------------------------------------------
