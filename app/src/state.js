@@ -2,6 +2,7 @@
 // 其它模块都从这里 import state 与工具函数，避免循环依赖。
 
 export const STORAGE_KEY = 'generic_coordinate_collector_v1';
+const SETTINGS_KEY = 'generic_coordinate_collector_settings_v1';
 
 export const state = {
   mode: 'collect',
@@ -19,8 +20,48 @@ export const state = {
   markers: new Map(),
   migrationBackup: null,
   lastPointerDown: null,
-  dirty: false
+  dirty: false,
+  // 用户偏好设置（localStorage 持久化）
+  settings: loadSettings(),
+  // 采点撤销栈（session 级，不持久化）：每条 { index, prevCenter }
+  undoStack: [],
+  // 二次确认标记：覆盖已采坐标 / Delete 清除坐标，防止误操作
+  pendingOverwriteIndex: -1,
+  pendingDeleteIndex: -1,
+  // shift 连选的锚点（列表复选框）
+  lastCheckIndex: -1
 };
+
+// ---------------------------------------------------------------------------
+// 用户偏好设置（localStorage 持久化）
+// ---------------------------------------------------------------------------
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+    return { autoAdvance: saved?.autoAdvance !== false };   // 默认开启自动前进
+  } catch {
+    return { autoAdvance: true };
+  }
+}
+
+export function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+}
+
+// ---------------------------------------------------------------------------
+// 采点撤销栈：记录每次采点/清除前的旧坐标，Ctrl+Z 逐步回退。
+// 清空类操作会清栈（快照恢复语义不同，避免误恢复）。
+// ---------------------------------------------------------------------------
+const UNDO_LIMIT = 50;
+
+export function pushUndo(index, prevCenter) {
+  state.undoStack.push({ index, prevCenter: prevCenter ? [...prevCenter] : null });
+  if (state.undoStack.length > UNDO_LIMIT) state.undoStack.shift();
+}
+
+export function clearUndoStack() {
+  state.undoStack.length = 0;
+}
 
 // ---------------------------------------------------------------------------
 // 草稿存取（localStorage）

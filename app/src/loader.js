@@ -1,7 +1,7 @@
 // 模型加载、SHA-256 指纹、raycast 采点、marker 网格管理。
 import { THREE, scene, camera, controls, grid, renderer, loader, stlLoader, raycaster, pointer, hint, getMarkerColors } from './scene.js';
-import { state, round, firstUncollectedIndex, saveDraft } from './state.js';
-import { showToast, renderAll, setProgress, hideProgress, updateHint } from './ui.js';
+import { state, round, firstUncollectedIndex, saveDraft, pushUndo } from './state.js';
+import { showToast, renderAll, setProgress, hideProgress, updateHint, selectItem, flashListItem } from './ui.js';
 
 // STL 统一渲染材质：标准 PBR，外观与 GLB 默认光照协调。
 const STL_MATERIAL = new THREE.MeshStandardMaterial({
@@ -67,7 +67,7 @@ export async function loadModel(url, label, file = null) {
     rebuildMarkers();
     fitCamera();
     renderAll();
-    showToast(`模型已加载：${label}`);
+    showToast(`模型已加载：${label}`, 'success');
   } catch (error) {
     showToast(`模型加载失败：${error?.message || error}`, true);
   } finally {
@@ -106,13 +106,17 @@ async function sha256Hex(buffer) {
 // ---------------------------------------------------------------------------
 // 采点（raycast）
 // ---------------------------------------------------------------------------
+// 覆盖确认的二次点击有效窗口（与 toast 显示时长匹配，超时需重新确认）。
+// 模块级变量：不能在函数体内声明，否则每次点击都会被重置导致永远无法确认。
+let pendingOverwriteTime = 0;
+
 export function collectAtPointer(event) {
   if (!state.modelRoot) {
-    showToast('请先加载模型（GLB / STL）', true);
+    showToast('请先加载模型（GLB / STL）', 'error');
     return;
   }
   if (!state.structures.length) {
-    showToast('请先导入或粘贴名称列表', true);
+    showToast('请先导入或粘贴名称列表', 'error');
     return;
   }
   if (state.activeIndex < 0) state.activeIndex = firstUncollectedIndex();
@@ -127,27 +131,53 @@ export function collectAtPointer(event) {
   raycaster.setFromCamera(pointer, camera);
   const hits = raycaster.intersectObject(state.modelRoot, true);
   if (!hits.length) {
-    showToast('没有点到模型表面，请靠近目标位置后再点', true);
+    showToast('没有点到模型表面，请靠近目标位置后再点', 'error');
     return;
   }
+
+  const item = state.structures[state.activeIndex];
+
+  // 覆盖保护：已有坐标的项第一次点击只确认不覆写，防止习惯性单击毁掉已采数据。
+  const confirmFresh = state.pendingOverwriteIndex === state.activeIndex
+    && performance.now() - pendingOverwriteTime < 3000;
+  if (item.center && !confirmFresh) {
+    state.pendingOverwriteIndex = state.activeIndex;
+    pendingOverwriteTime = performance.now();
+    showToast(`「${item.name}」已有坐标，再次点击将覆盖`);
+    return;
+  }
+  state.pendingOverwriteIndex = -1;
+  pendingOverwriteTime = 0;
 
   const worldPoint = hits[0].point.clone();
   const localPoint = state.modelRoot.worldToLocal(worldPoint.clone());
   const coord = [round(localPoint.x), round(localPoint.y), round(localPoint.z)];
-  const item = state.structures[state.activeIndex];
+  const collectedIndex = state.activeIndex;
+
+  // 撤销栈：记录新采/覆写前的旧坐标，Ctrl+Z 可回退。
+  pushUndo(collectedIndex, item.center);
+
   item.center = coord;
   item.status = '已采集';
-  placeMarker(state.activeIndex, coord);
+  placeMarker(collectedIndex, coord, true);
   state.dirty = true;
   saveDraft();
 
-  // 不自动跳转：保持当前选中项，由用户自主点击列表切换下一个。
-  renderAll();
   const allDone = state.structures.every(s => s.center);
+  const coordText = `[${coord.join(', ')}]`;
+  renderAll();
+
+  // 自动前进：采完直接选中下一个未采集项，重度采集循环零鼠标往返（更多菜单可关）。
+  if (state.settings.autoAdvance && !allDone) {
+    const next = firstUncollectedIndex(collectedIndex + 1);
+    if (next >= 0) selectItem(next);   // 内部会再 renderAll 并滚动列表
+  }
+  flashListItem(collectedIndex);
+
   if (allDone) {
-    showToast(`已记录「${item.name}」，全部点位采集完成，可导出坐标 JSON`);
+    showToast(`已记录「${item.name}」${coordText}，全部点位采集完成，可导出坐标 JSON`, 'success');
   } else {
-    showToast(`已记录「${item.name}」的坐标，可在列表点击切换下一个`);
+    showToast(`已记录「${item.name}」${coordText}`, 'success');
   }
 }
 
@@ -157,7 +187,7 @@ export function collectAtPointer(event) {
 
 // marker 配色随主题变化（从 scene.js 的 getMarkerColors 动态读取）。
 
-export function placeMarker(index, localCoord) {
+export function placeMarker(index, localCoord, animate = false) {
   if (!state.modelRoot || !localCoord) return;
   const old = state.markers.get(index);
   if (old) disposeMarker(old);
@@ -173,6 +203,20 @@ export function placeMarker(index, localCoord) {
   marker.userData.marker = true;
   scene.add(marker);
   state.markers.set(index, marker);
+  if (animate) popMarker(marker);
+}
+
+// 采点成功的弹出动画：scale 0→1，150ms，克制的确认感反馈。
+function popMarker(marker) {
+  const started = performance.now();
+  marker.scale.setScalar(0.01);
+  function frame() {
+    const t = Math.min((performance.now() - started) / 150, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    marker.scale.setScalar(Math.max(eased, 0.01));
+    if (t < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 }
 
 // 释放单个 marker 的 GPU 资源，避免重复采点导致内存累积。
@@ -241,7 +285,16 @@ export function setTopView() {
 }
 
 export function setIsoView() {
-  fitCamera();
+  if (!state.modelBox) return;
+  const sphere = state.modelBox.getBoundingSphere(new THREE.Sphere());
+  const distance = sphere.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.25;
+  // 经典 45° 等轴视角（与 fitCamera 偏低的 3/4 视角区分开），带过渡动画。
+  const direction = new THREE.Vector3(1, 1, 1).normalize();
+  animateCamera(
+    sphere.center.clone().addScaledVector(direction, distance),
+    sphere.center.clone(),
+    500
+  );
 }
 
 export function flyToLocalCoord(localCoord, distanceScale = 0.75) {

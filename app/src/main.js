@@ -1,6 +1,6 @@
 // 应用入口：初始化、事件绑定、渲染循环。
 import { THREE, scene, camera, renderer, controls, viewer, readout, raycaster, pointer } from './scene.js';
-import { state, restoreDraft, escapeHtml, round, firstUncollectedIndex, saveDraft } from './state.js';
+import { state, restoreDraft, escapeHtml, round, firstUncollectedIndex, saveDraft, saveSettings } from './state.js';
 import { normalizeStructures, parsePastedText } from './structures.js';
 import {
   loadModel, collectAtPointer, rebuildMarkers,
@@ -9,7 +9,8 @@ import {
 import {
   setMode, renderAll, renderList, updateHint, showToast,
   clearCoordinates, clearCoordsOnly, clearAll,
-  clearSelectedCoords, selectAll, clearSelection, selectItem
+  clearSelectedCoords, selectAll, clearSelection, selectItem,
+  undoLast, requestDeleteActiveCoord
 } from './ui.js';
 import {
   exportNameMap, exportFullProject, migrateLegacyCenteredCoordinates,
@@ -37,12 +38,26 @@ document.getElementById('btnJson').addEventListener('click', () => jsonInput.cli
 document.getElementById('btnPaste').addEventListener('click', openPasteDialog);
 document.getElementById('btnExportMap').addEventListener('click', exportNameMap);
 // 「更多」菜单项绑定到原逻辑
+// 「更多」菜单项绑定到原逻辑
 document.getElementById('mExportFull').addEventListener('click', exportFullProject);
 document.getElementById('mExportDraft').addEventListener('click', exportDraftFile);
 document.getElementById('mImportDraft').addEventListener('click', () => draftInput.click());
 document.getElementById('mMigrateLegacy').addEventListener('click', migrateLegacyCenteredCoordinates);
 document.getElementById('mUndoMigrate').addEventListener('click', undoLegacyMigration);
 document.getElementById('mClear').addEventListener('click', clearCoordinates);
+
+// 采点自动前进开关（默认开）：开关项保持菜单展开，便于确认状态变化
+const mToggleAutoAdvance = document.getElementById('mToggleAutoAdvance');
+mToggleAutoAdvance.addEventListener('click', (event) => {
+  event.stopPropagation();
+  state.settings.autoAdvance = !state.settings.autoAdvance;
+  saveSettings();
+  updateAutoAdvanceLabel();
+  showToast(state.settings.autoAdvance ? '已开启：采点后自动跳到下一个未采集项' : '已关闭：采点后停留在当前项');
+});
+function updateAutoAdvanceLabel() {
+  mToggleAutoAdvance.textContent = `采点自动前进：${state.settings.autoAdvance ? '开 ✓' : '关'}`;
+}
 
 // 「更多」菜单：点击切换显示，点外部/选中项后自动关闭
 const btnMore = document.getElementById('btnMore');
@@ -212,10 +227,28 @@ window.addEventListener('beforeunload', (event) => {
 // 键盘快捷键：提升采集效率（对话框打开时禁用，避免冲突）
 // ---------------------------------------------------------------------------
 window.addEventListener('keydown', (event) => {
-  // 对话框打开或输入框聚焦时不响应快捷键
-  const tag = event.target.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  // 对话框打开时不响应快捷键，避免与对话框内操作冲突
   if (document.querySelector('dialog[open]')) return;
+  const tag = event.target.tagName;
+  const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+  // Ctrl/Cmd+Z：撤销上一次采点/清除（输入框内保留原生文本撤销，不拦截）
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+    if (isTyping) return;
+    event.preventDefault();
+    undoLast();
+    return;
+  }
+
+  // 输入框聚焦时不响应其余快捷键
+  if (isTyping) return;
+
+  // `/` 聚焦搜索框
+  if (event.key === '/') {
+    event.preventDefault();
+    document.getElementById('search')?.focus();
+    return;
+  }
 
   const n = state.structures.length;
   if (!n) return;
@@ -243,6 +276,13 @@ window.addEventListener('keydown', (event) => {
       selectItem(Math.max(state.activeIndex - 1, 0));
       break;
     }
+    case 'Delete':
+    case 'Backspace': {
+      // Delete：清除当前项坐标（二次确认，可 Ctrl+Z 撤销）
+      event.preventDefault();
+      requestDeleteActiveCoord();
+      break;
+    }
     case 'Escape': {
       // Esc：取消列表勾选
       if (state.selected.size) {
@@ -261,6 +301,7 @@ async function init() {
   initTheme();
   initCompress();
   initExportDemo();
+  updateAutoAdvanceLabel();
   const restored = restoreDraft();
   renderAll();
   updateHint();
@@ -369,20 +410,18 @@ function animate() {
 }
 
 // 缓存上一次内容，仅在变化时写 DOM，避免每帧重建节点触发回流。
+// 「当前项」由 viewer 顶部 targetChip 展示，这里只保留模型与焦点。
 let lastReadout = '';
 function updateReadout() {
   const target = controls.target;
-  const active = state.structures[state.activeIndex];
   const text = [
     `模型：${state.modelLabel || '未加载'}`,
-    `焦点：[${round(target.x)}, ${round(target.y)}, ${round(target.z)}]`,
-    `当前：${active ? active.name : '无'}`
+    `焦点：[${round(target.x)}, ${round(target.y)}, ${round(target.z)}]`
   ].join('<br>');
   if (text !== lastReadout) {
     readout.innerHTML = [
       `模型：${escapeHtml(state.modelLabel || '未加载')}`,
-      `焦点：[${round(target.x)}, ${round(target.y)}, ${round(target.z)}]`,
-      `当前：${active ? escapeHtml(active.name) : '无'}`
+      `焦点：[${round(target.x)}, ${round(target.y)}, ${round(target.z)}]`
     ].join('<br>');
     lastReadout = text;
   }

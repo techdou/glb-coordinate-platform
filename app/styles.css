@@ -38,9 +38,6 @@
   --btn-danger-bg: #32191c;
   --btn-danger-border: #6b2d34;
   --btn-danger-text: #ffc4c8;
-  --viewer-grad-1: rgba(112, 168, 255, .11);
-  --viewer-grad-2: #0e141b;
-  --viewer-grad-3: #080b0f;
   --toast-bg: rgba(12, 16, 20, .88);
   --toast-border: rgba(255, 255, 255, .14);
   --dialog-shadow: rgba(0, 0, 0, .55);
@@ -98,9 +95,6 @@
   --btn-danger-bg: #f8d7d9;
   --btn-danger-border: #c93d45;
   --btn-danger-text: #8a1f26;
-  --viewer-grad-1: rgba(112, 168, 255, .08);
-  --viewer-grad-2: #e8edf2;
-  --viewer-grad-3: #f5f7fa;
   --toast-bg: rgba(255, 255, 255, .95);
   --toast-border: rgba(0, 30, 60, .12);
   --dialog-shadow: rgba(40, 60, 80, .25);
@@ -119,9 +113,21 @@
 }
 
 /* 主题切换过渡，避免硬切闪烁 */
-body, button, input, textarea, select, dialog, .item, .stat, .list-title, .list-foot {
+body, button, input, textarea, select, dialog, .item, .list-title, .list-foot {
   transition: background-color .2s ease, border-color .2s ease, color .2s ease;
 }
+
+/* 间距/字号令牌：收敛散落的魔法值（新组件优先用令牌） */
+:root {
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-lg: 16px; --fs-xl: 20px;
+}
+
+/* [hidden] 全局防护：作者样式的 display 会击穿 UA 默认的 [hidden] 隐藏规则 */
+[hidden] { display: none !important; }
+
+/* 键盘导航可见焦点环（视觉层 a11y） */
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -162,19 +168,33 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 }
 
 .header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
   padding: 18px 18px 14px;
   border-bottom: 1px solid var(--line);
 }
+.header-text { flex: 1; min-width: 0; }
+.header-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.icon-btn {
+  min-width: 34px;
+  padding: 7px 8px;
+  text-align: center;
+}
 h1 {
   margin: 0 0 8px;
-  font-size: 20px;
+  font-size: var(--fs-xl);
   line-height: 1.2;
   letter-spacing: 0;
 }
 .sub {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
 }
 
@@ -182,18 +202,23 @@ h1 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 7px;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--line);
 }
 .tool-btn {
   min-height: 34px;
   padding: 7px 9px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   text-align: left;
   position: relative;  /* tooltip 定位锚点 */
 }
-/* 自定义悬浮提示：data-tip 属性 + 伪元素，深色主题，悬停 0.3s 后出现 */
-.tool-btn[data-tip]::after {
+.tool-btn.span-2 {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+/* 自定义悬浮提示：data-tip 属性 + 伪元素，深色主题，悬停 0.3s 后出现。
+   通用规则（所有带 data-tip 的元素生效）；默认右弹出，data-tip-pos="bottom" 下弹出。 */
+[data-tip]::after {
   content: attr(data-tip);
   position: absolute;
   top: 50%;
@@ -218,9 +243,24 @@ h1 {
   visibility: hidden;
   transition: opacity .18s ease .3s, visibility .18s ease .3s;
 }
-.tool-btn[data-tip]:hover::after {
+[data-tip]:hover::after {
   opacity: 1;
   visibility: visible;
+}
+/* 下弹出变体：header 右上角的图标按钮（右弹会溢出视口） */
+[data-tip-pos="bottom"]::after {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+}
+/* 更多菜单项：菜单自身在 header 右侧下拉，tooltip 向左弹出避免溢出 */
+.more-item {
+  position: relative;
+}
+.more-item[data-tip]::after {
+  left: auto;
+  right: calc(100% + 8px);
 }
 .tool-btn.primary {
   background: var(--btn-primary-bg);
@@ -238,29 +278,40 @@ h1 {
   color: var(--btn-danger-text);
 }
 
-.status-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
-  padding: 10px 16px;
+/* 采集进度条（替代原三统计卡：批量采集的进度感用 bar 表达更直观） */
+.progress-section {
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--line);
 }
-.stat {
-  padding: 8px 8px;
+.progress-line {
+  height: 6px;
+  border-radius: 999px;
   background: var(--surface-1);
   border: 1px solid var(--border-soft);
-  border-radius: 6px;
+  overflow: hidden;
 }
-.stat b {
-  display: block;
-  font-size: 18px;
-  line-height: 1.1;
+.progress-line-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--accent-2);
+  transition: width .3s ease;
 }
-.stat span {
-  display: block;
-  margin-top: 3px;
+.progress-label {
+  margin-top: 7px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 导出区：钉在 sidebar 底部，输入在上、输出在下，动线闭环 */
+.export-bar {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.export-bar .tool-btn {
+  width: 100%;
+  text-align: center;
 }
 
 .list-head {
@@ -311,17 +362,14 @@ h1 {
   flex: 0 0 auto;
   padding: 8px 16px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   border-bottom: 1px solid var(--border-soft);
   background: var(--surface-2);
 }
 .list-title b {
   color: var(--text-bright);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
-}
-.scroll-hint {
-  white-space: nowrap;
 }
 #list {
   flex: 1 1 auto;
@@ -363,21 +411,20 @@ h1 {
 .list-action #listActionCount { color: var(--accent); margin-right: auto; }
 .tool-btn.small { min-height: 28px; padding: 4px 10px; font-size: 11px; }
 
-/* 「更多」下拉菜单 */
+/* 「更多」下拉菜单（挂在 header 右上角，从右缘对齐下拉） */
 .more-wrap { position: relative; }
 .more-menu {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
+  right: 0;
   z-index: 50;
-  min-width: 180px;
+  min-width: 200px;
   padding: 5px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
   box-shadow: 0 12px 32px var(--shadow);
 }
-.more-menu[hidden] { display: none; }
 .more-item {
   display: block;
   width: 100%;
@@ -396,6 +443,21 @@ h1 {
 .more-item.good { color: var(--btn-good-text); }
 .more-item.danger { color: var(--btn-danger-text); }
 .more-sep { height: 1px; margin: 4px 0; background: var(--border-faint); }
+/* 列表空态引导（无清单时内嵌双按钮，替代一块空白） */
+.list-empty {
+  padding: 26px var(--space-3);
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.list-empty p { margin: 0; }
+.list-empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
 .item {
   display: grid;
   grid-template-columns: 16px 24px 1fr auto;
@@ -405,11 +467,17 @@ h1 {
   margin-bottom: 7px;
   padding: 9px 10px;
   border: 1px solid transparent;
-  border-left: 3px solid var(--line);
+  border-left: 3px solid transparent;   /* 默认无色条：色条是信号（done 绿 / active 金），不是装饰 */
   border-radius: 7px;
   background: var(--surface-1);
   cursor: pointer;
 }
+/* 采点成功的行闪烁反馈（ui.js flashListItem 加 class） */
+@keyframes item-flash {
+  0% { background: var(--st-success); border-color: var(--st-success-bd); }
+  100% { background: var(--surface-1); border-color: transparent; }
+}
+.item.flash { animation: item-flash .6s ease-out; }
 .row-check {
   width: 16px;
   height: 16px;
@@ -448,7 +516,8 @@ h1 {
   margin-top: 3px;
   color: var(--muted);
   font-family: Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;   /* 坐标数字等宽对齐，扫读更省力 */
   white-space: nowrap;
 }
 .badge {
@@ -468,11 +537,75 @@ h1 {
 #viewer {
   position: relative;
   min-width: 0;
-  background:
-    radial-gradient(circle at 70% 12%, var(--viewer-grad-1), transparent 34%),
-    linear-gradient(180deg, var(--viewer-grad-2) 0%, var(--viewer-grad-3) 100%);
+  background: var(--bg);   /* renderer alpha:false，canvas 不透明，CSS 渐变会被盖住，用纯色即可 */
 }
 canvas { display: block; }
+
+/* 当前目标胶囊：viewer 顶部居中，全应用最重要的信息给最大视觉权重 */
+.target-chip {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  max-width: min(520px, 56vw);
+  padding: 9px 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--overlay-strong);
+  box-shadow: 0 10px 28px var(--shadow);
+  backdrop-filter: blur(9px);
+  pointer-events: none;   /* 不挡 3D 交互 */
+  white-space: nowrap;
+  overflow: hidden;
+}
+.target-chip .chip-seq {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.target-chip .chip-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-bright);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.target-chip[data-state="all-done"] .chip-name { color: var(--accent-2); }
+.target-chip[data-state="done-item"] .chip-name { color: var(--text-dim); }
+
+/* 空态引导：无模型时 viewer 中央的拖放 CTA，模型加载后隐藏 */
+.empty-cta {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;   /* 视觉引导，不拦截拖放/点击事件 */
+}
+.empty-cta-box {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 28px 38px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  background: var(--overlay-strong);   /* 自带底色浮起，浅色网格背景上也清晰 */
+  box-shadow: 0 10px 28px var(--shadow);
+  backdrop-filter: blur(6px);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+.empty-cta-box b {
+  color: var(--text-bright);
+  font-size: 14px;
+  font-weight: 600;
+}
 
 /* 模型加载进度条 */
 .progress-overlay {
@@ -486,7 +619,6 @@ canvas { display: block; }
   align-items: center;
   gap: 10px;
 }
-.progress-overlay[hidden] { display: none; }
 .progress-bar {
   width: min(280px, 60vw);
   height: 8px;
@@ -562,7 +694,7 @@ canvas { display: block; }
   background: var(--toast-bg);
   box-shadow: 0 10px 28px var(--shadow);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   transform: translate(-50%, 80px);
   opacity: 0;
   pointer-events: none;
@@ -572,6 +704,9 @@ canvas { display: block; }
   opacity: 1;
   transform: translate(-50%, 0);
 }
+/* toast 三态：info 中性 / success 绿边 / error 红边 */
+#toast[data-kind="success"] { border-color: var(--accent-2); }
+#toast[data-kind="error"] { border-color: var(--danger); }
 
 dialog {
   width: min(720px, calc(100vw - 40px));
@@ -682,14 +817,17 @@ textarea {
   #sidebar { grid-row: 2; border-right: none; border-top: 1px solid var(--line); min-height: 0; }
   #viewer { grid-row: 1; }
   .toolbar { grid-template-columns: 1fr 1fr; }
-  .header { padding: 12px 14px 10px; }
-  h1 { font-size: 16px; }
-  .sub { font-size: 11px; }
-  .tool-btn { min-height: 32px; }
-  .status-grid, .list-head, .toolbar { padding-left: 12px; padding-right: 12px; }
+  .header { padding: 10px 14px 8px; align-items: center; }
+  .header .sub { display: none; }   /* 窄屏 header 收成一行，说明文字让位给列表 */
+  h1 { font-size: var(--fs-lg); }
+  .tool-btn { min-height: 40px; }   /* 触屏目标 ≥40px，窄屏反而放大 */
+  .view-controls button { width: 44px; height: 40px; }
+  .progress-section, .list-head, .toolbar, .export-bar { padding-left: 12px; padding-right: 12px; }
   .list-title, .list-foot { padding-left: 12px; padding-right: 12px; }
   .overlay { top: 10px; left: 10px; right: 10px; }
   #hint { max-width: 100%; }
   #readout { display: none; }
+  /* 窄屏 hint 占满顶部，目标胶囊挪到底部避开 */
+  .target-chip { top: auto; bottom: 64px; max-width: calc(100vw - 20px); }
   #toast { max-width: calc(100vw - 20px); }
 }

@@ -124,7 +124,7 @@ export function migrateLegacyCenteredCoordinates() {
   rebuildMarkers();
   saveDraft();
   renderAll();
-  showToast(`已迁移 ${withCoords.length} 个旧版坐标；如位置不对，点击"撤销迁移"`);
+  showToast(`已迁移 ${withCoords.length} 个旧版坐标；如位置不对，点击"撤销迁移"`, 'success');
 }
 
 export function undoLegacyMigration() {
@@ -186,7 +186,7 @@ export async function importDraftFile(file) {
     saveDraft();
     renderAll();
     updateHint();
-    showToast(`已导入草稿：${state.structures.length} 个名称（模型需自行重新加载）`);
+    showToast(`已导入草稿：${state.structures.length} 个名称（模型需自行重新加载）`, 'success');
   } catch (error) {
     showToast(`草稿解析失败：${error.message}`, true);
   }

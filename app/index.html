@@ -11,39 +11,43 @@
 <div id="app">
   <aside id="sidebar">
     <div class="header">
-      <h1>通用 3D 坐标采集工具</h1>
-      <p class="sub">加载任意 GLB 模型和名称列表，选中名称后在模型上点一下，导出 <code>{名称: [x,y,z]}</code>。</p>
-    </div>
-
-    <div class="toolbar">
-      <button class="tool-btn" id="btnTheme" data-tip="切换明暗主题">🌙</button>
-      <button class="tool-btn primary" id="btnModel" data-tip="选择本地 .glb / .gltf / .stl 模型文件加载到场景，或直接把文件拖进窗口">选择 GLB / STL 模型</button>
-      <button class="tool-btn" id="btnJson" data-tip="导入一份清单 JSON 文件（支持 5 种格式：名称数组、对象数组、工程格式、名称映射等）">导入 JSON 清单</button>
-      <button class="tool-btn" id="btnPaste" data-tip="打开对话框粘贴名称（一行一个，或直接粘贴 JSON）">粘贴名称列表</button>
-      <button class="tool-btn good" id="btnExportMap" data-tip="导出最精简的坐标映射 {名称: [x,y,z]}，给业务系统用">导出坐标 JSON</button>
-      <div class="more-wrap">
-        <button class="tool-btn" id="btnMore" data-tip="更多功能：工程/草稿/展示页/压缩/迁移/清空">更多 ▾</button>
-        <div class="more-menu" id="moreMenu" hidden>
-          <button class="more-item" id="mExportFull" data-tip="导出含模型 SHA-256 指纹、包围盒、坐标的完整工程，便于归档和下次继续">导出完整工程</button>
-          <button class="more-item good" id="mExportDemo" data-tip="打包一个可直接运行的示例展示页 zip（含模型+坐标），发给开发者二次开发参考">导展示页(zip)</button>
-          <div class="more-sep"></div>
-          <button class="more-item" id="mExportDraft" data-tip="把当前进度（清单+坐标）导出为文件，可换浏览器/换电脑恢复（模型需另传）">导出草稿</button>
-          <button class="more-item" id="mImportDraft" data-tip="从之前导出的草稿文件恢复进度">导入草稿</button>
-          <div class="more-sep"></div>
-          <button class="more-item" id="mCompress" data-tip="打开对话框压缩 GLB（DRACO+纹理优化，需 Node.js），压缩后体积更小加载更快">压缩 GLB</button>
-          <div class="more-sep"></div>
-          <button class="more-item" id="mMigrateLegacy" data-tip="把旧版「居中场景坐标」转换为 GLB 原始局部坐标（仅对优化前工具打的点有效）">迁移旧版坐标</button>
-          <button class="more-item" id="mUndoMigrate" data-tip="撤销最近一次坐标迁移，恢复到迁移前的状态">撤销迁移</button>
-          <div class="more-sep"></div>
-          <button class="more-item danger" id="mClear" data-tip="清空已采集的坐标。勾选了列表项时只清选中项，否则弹窗选择清空范围">清空坐标</button>
+      <div class="header-text">
+        <h1>通用 3D 坐标采集工具</h1>
+        <p class="sub">加载任意 GLB 模型和名称列表，选中名称后在模型上点一下，导出 <code>{名称: [x,y,z]}</code>。</p>
+      </div>
+      <div class="header-actions">
+        <button class="tool-btn icon-btn" id="btnTheme" data-tip="切换明暗主题" data-tip-pos="bottom">🌙</button>
+        <div class="more-wrap">
+          <button class="tool-btn icon-btn" id="btnMore" data-tip="更多功能：设置/工程/草稿/展示页/压缩/迁移/清空" data-tip-pos="bottom">⋯</button>
+          <div class="more-menu" id="moreMenu" hidden>
+            <button class="more-item" id="mToggleAutoAdvance" data-tip="开启后：采完一个点自动选中下一个未采集项，重度采集零鼠标往返；关闭后：停留在当前项，手动切换">采点自动前进：开 ✓</button>
+            <div class="more-sep"></div>
+            <button class="more-item" id="mExportFull" data-tip="导出含模型 SHA-256 指纹、包围盒、坐标的完整工程，便于归档和下次继续">导出完整工程</button>
+            <button class="more-item good" id="mExportDemo" data-tip="打包一个可直接运行的示例展示页 zip（含模型+坐标），发给开发者二次开发参考">导展示页(zip)</button>
+            <div class="more-sep"></div>
+            <button class="more-item" id="mExportDraft" data-tip="把当前进度（清单+坐标）导出为文件，可换浏览器/换电脑恢复（模型需另传）">导出草稿</button>
+            <button class="more-item" id="mImportDraft" data-tip="从之前导出的草稿文件恢复进度">导入草稿</button>
+            <div class="more-sep"></div>
+            <button class="more-item" id="mCompress" data-tip="打开对话框压缩 GLB（DRACO+纹理优化，需 Node.js），压缩后体积更小加载更快">压缩 GLB</button>
+            <div class="more-sep"></div>
+            <button class="more-item" id="mMigrateLegacy" data-tip="把旧版「居中场景坐标」转换为 GLB 原始局部坐标（仅对优化前工具打的点有效）">迁移旧版坐标</button>
+            <button class="more-item" id="mUndoMigrate" data-tip="撤销最近一次坐标迁移，恢复到迁移前的状态">撤销迁移</button>
+            <div class="more-sep"></div>
+            <button class="more-item danger" id="mClear" data-tip="清空已采集的坐标。勾选了列表项时只清选中项，否则弹窗选择清空范围">清空坐标</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="status-grid">
-      <div class="stat"><b id="statTotal">0</b><span>名称</span></div>
-      <div class="stat"><b id="statDone">0</b><span>已采集</span></div>
-      <div class="stat"><b id="statLeft">0</b><span>剩余</span></div>
+    <div class="toolbar">
+      <button class="tool-btn primary span-2" id="btnModel" data-tip="选择本地 .glb / .gltf / .stl 模型文件加载到场景，或直接把文件拖进窗口">选择 GLB / STL 模型</button>
+      <button class="tool-btn" id="btnJson" data-tip="导入一份清单 JSON 文件（支持 5 种格式：名称数组、对象数组、工程格式、名称映射等）">导入 JSON 清单</button>
+      <button class="tool-btn" id="btnPaste" data-tip="打开对话框粘贴名称（一行一个，或直接粘贴 JSON）">粘贴名称列表</button>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-line"><div class="progress-line-fill" id="statFill"></div></div>
+      <div class="progress-label" id="statLabel">尚未导入清单</div>
     </div>
 
     <div class="list-head">
@@ -51,22 +55,25 @@
         <button id="modeCollect" class="active">采集模式</button>
         <button id="modeBrowse">浏览模式</button>
       </div>
-      <input id="search" type="search" placeholder="搜索名称">
+      <input id="search" type="search" placeholder="搜索名称（/ 快速聚焦）">
     </div>
 
     <div class="list-shell">
       <div class="list-title">
         <b>名称列表</b>
-        <span class="scroll-hint">滚轮滑动查看全部</span>
       </div>
       <ul id="list"></ul>
       <div class="list-action" id="listAction" hidden>
         <span id="listActionCount">已选 0 项</span>
-        <button class="tool-btn danger small" id="btnClearSelected" title="清空所选名称的坐标（保留名称本身）">清空选中坐标</button>
-        <button class="tool-btn small" id="btnSelectAll">全选</button>
-        <button class="tool-btn small" id="btnClearSelect">取消选择</button>
+        <button class="tool-btn danger small" id="btnClearSelected" data-tip="清空所选名称的坐标（保留名称本身）">清空选中坐标</button>
+        <button class="tool-btn small" id="btnSelectAll" data-tip="全选当前列表全部项">全选</button>
+        <button class="tool-btn small" id="btnClearSelect" data-tip="取消全部勾选">取消选择</button>
       </div>
       <div class="list-foot" id="listFoot">当前显示 0 项</div>
+    </div>
+
+    <div class="export-bar">
+      <button class="tool-btn good" id="btnExportMap" data-tip="导出最精简的坐标映射 {名称: [x,y,z]}，给业务系统用">导出坐标 JSON</button>
     </div>
   </aside>
 
@@ -75,14 +82,21 @@
       <div id="hint"></div>
       <div id="readout"></div>
     </div>
+    <div class="target-chip" id="targetChip" hidden></div>
+    <div class="empty-cta" id="emptyCta">
+      <div class="empty-cta-box">
+        <b>拖入 .glb / .gltf / .stl 文件开始</b>
+        <span>或点击左侧「选择 GLB / STL 模型」</span>
+      </div>
+    </div>
     <div class="progress-overlay" id="progressOverlay" hidden>
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
       <div class="progress-text" id="progressText">加载中…</div>
     </div>
     <div class="view-controls">
-      <button id="viewFit" title="适配模型">Fit</button>
-      <button id="viewTop" title="俯视">Top</button>
-      <button id="viewIso" title="斜视">Iso</button>
+      <button id="viewFit" data-tip="适配模型（视角复位到模型全貌）">Fit</button>
+      <button id="viewTop" data-tip="俯视（正上方视角）">Top</button>
+      <button id="viewIso" data-tip="等轴斜视（45° 经典视角）">Iso</button>
     </div>
     <div id="toast"></div>
   </main>
