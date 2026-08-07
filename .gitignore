@@ -30,6 +30,11 @@ CoordinateCollector.exe
 # 临时验证脚本
 _verify*.mjs
 
+# 内部文档与开发状态（不纳入版本控制，避免设计文档/内部资料/开发计划泄漏）
+docs/
+*.legacy.md
+*.legacy.txt
+
 # 密钥与环境变量（绝不提交，防止泄露）
 .env
 .env.*
