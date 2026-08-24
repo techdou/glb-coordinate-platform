@@ -2,7 +2,7 @@
 
 > 面向任意 GLB / GLTF / STL 模型的浏览器端坐标采集工具：加载模型和名称清单，在模型上逐个点选位置，导出 `{名称: [x, y, z]}`。纯前端 + Python 静态服务器，离线可用。
 
-![Python](https://img.shields.io/badge/Python-3.8+-blue) ![three.js](https://img.shields.io/badge/three.js-r160-green) ![License](https://img.shields.io/badge/license-MIT-success) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+![Python](https://img.shields.io/badge/Python-3.8+-blue) ![three.js](https://img.shields.io/badge/three.js-r160-green) ![License](https://img.shields.io/badge/License-Apache_2.0-blue) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
 ## 功能特性
 
@@ -164,4 +164,4 @@ python scripts/start.py --no-browser
 
 ## License
 
-MIT
+Apache-2.0
